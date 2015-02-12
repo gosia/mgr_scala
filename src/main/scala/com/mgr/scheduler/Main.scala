@@ -19,7 +19,7 @@ object Main {
       case e: Exception =>
         log.error(e, "Failed starting services, exiting")
         ServiceTracker.shutdown()
-        System.exit(1) 
+        System.exit(1)
     }
   }
 }
