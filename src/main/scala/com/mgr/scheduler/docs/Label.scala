@@ -1,11 +1,16 @@
 package com.mgr.scheduler.docs
 
-import com.mgr.utils.couch
-
 final case class Label(
   _id: String,
   _rev: Option[String] = None,
-  scheduling_id: String,
+  config_id: String,
 
   `type`: String = "label"
-) extends couch.Document
+) extends Base
+
+object Label {
+  def apply(configId: String, label: String): Label = Label(
+    _id = Base.getCouchId(configId, label),
+    config_id = configId
+  )
+}

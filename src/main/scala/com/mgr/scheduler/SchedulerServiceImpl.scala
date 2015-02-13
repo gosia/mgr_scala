@@ -21,4 +21,14 @@ class SchedulerServiceImpl(
       throw e
   }
 
+  def createConfig(
+    id: String,
+    terms: Seq[scheduler.Term],
+    rooms: Seq[scheduler.Room],
+    teachers: Seq[scheduler.Teacher],
+    groups: Seq[scheduler.Group]
+  ): Future[Unit] = {
+    Future.Unit handle exceptions
+  }
+
 }

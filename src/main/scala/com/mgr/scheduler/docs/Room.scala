@@ -1,17 +1,28 @@
 package com.mgr.scheduler.docs
 
-import com.mgr.utils.couch
+import com.mgr.thrift.scheduler
 
 final case class Room(
   _id: String,
   _rev: Option[String] = None,
-  scheduling_id: String,
+  config_id: String,
 
-  availability: Seq[String],
-  conflicting: Seq[String],
+  terms: Seq[String],
   labels: Seq[String],
-  not_conflicting: Seq[String],
-  terms_num: Int,
 
   `type`: String = "room"
-) extends couch.Document
+) extends Base {
+
+  def isValid(validTerms: Set[String], validLabels: Set[String]): Boolean =
+    (terms.toSet - validTerms).isEmpty && (labels.toSet - validLabels).isEmpty
+
+}
+
+object Room {
+  def apply(configId: String, room: scheduler.Room): Room = Room(
+    _id = Base.getCouchId(configId, room.id),
+    config_id = configId,
+    terms = room.terms map { Base.getCouchId(configId, _) },
+    labels = room.labels map { Base.getCouchId(configId, _) }
+  )
+}
