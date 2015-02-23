@@ -52,6 +52,30 @@ struct Group {
   8: i16 students_num;
 }
 
+enum Algorithm {
+  RANDOM
+}
+
+enum TaskStatus {
+  NOT_STARTED,
+  PROCESSING,
+  FINISHED
+}
+
+struct TaskInfo {
+  1: Id id;
+  2: TaskStatus status;
+}
+
+struct PlaceAndTime {
+  1: Id term;
+  2: Id room;
+}
+
+struct Timetable {
+  1: map<Id, PlaceAndTime> group_to_place_and_time;
+}
+
 service SchedulerService {
 
   void createConfig(
@@ -60,6 +84,31 @@ service SchedulerService {
     3: list<Room> rooms;
     4: list<Teacher> teachers;
     5: list<Group> groups;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  list<TaskInfo> getConfigTasks(
+    1: Id configId;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  Id startTask(
+    1: Id configId;
+    2: Algorithm algorithm;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  TaskStatus getTaskStatus(
+    1: Id taskId;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  Timetable getTaskResult(
+    1: Id taskId;
   ) throws (
     1: SchedulerException se;
   )

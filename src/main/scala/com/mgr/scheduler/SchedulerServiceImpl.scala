@@ -31,4 +31,20 @@ class SchedulerServiceImpl(
     handlers.ConfigHandler.createConfig(id, terms, rooms, teachers, groups) handle exceptions
   }
 
+  def getConfigTasks(configId: String): Future[Seq[scheduler.TaskInfo]] = {
+    handlers.ConfigHandler.getConfigTasks(configId) handle exceptions
+  }
+
+  def getTaskResult(taskId: String): Future[scheduler.Timetable] = {
+    handlers.TaskHandler.getTaskResult(taskId) handle exceptions
+  }
+
+  def getTaskStatus(taskId: String): Future[scheduler.TaskStatus] = {
+    handlers.TaskHandler.getTaskStatus(taskId) handle exceptions
+  }
+
+  def startTask(configId: String, algorithm: scheduler.Algorithm): Future[String] = {
+    handlers.TaskHandler.startTask(configId, algorithm) handle exceptions
+  }
+
 }

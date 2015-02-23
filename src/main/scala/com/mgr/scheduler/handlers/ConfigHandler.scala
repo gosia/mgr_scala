@@ -87,4 +87,6 @@ object ConfigHandler extends Logging {
     }}
   }
 
+  def getConfigTasks(configId: String): Future[Seq[scheduler.TaskInfo]] = ???
+
 }
