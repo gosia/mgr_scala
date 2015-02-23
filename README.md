@@ -1,3 +1,3 @@
-# Caprica
+# Scheduler
 
-Creation/edition/getting/search of recipes, ingredients, meals and skills.
+Create timetable for rooms, teachers and groups.
