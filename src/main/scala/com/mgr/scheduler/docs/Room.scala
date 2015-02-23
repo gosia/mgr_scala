@@ -9,20 +9,36 @@ final case class Room(
 
   terms: Seq[String],
   labels: Seq[String],
+  capacity: Int,
 
-  `type`: String = "room"
+  `type`: String = Room.`type`
 ) extends Base {
 
-  def isValid(validTerms: Set[String], validLabels: Set[String]): Boolean =
-    (terms.toSet - validTerms).isEmpty && (labels.toSet - validLabels).isEmpty
+  def isValid(validTerms: Set[String], validLabels: Set[String]): (Option[String], Boolean) = {
+    if ((terms.toSet -- validTerms).isEmpty && (labels.toSet -- validLabels).isEmpty) {
+      (None, true)
+    } else {
+      val unknownTerms = (terms.toSet -- validTerms).mkString(", ")
+      val unknownLabels = (labels.toSet -- validLabels).mkString(", ")
+      (
+        Some(
+          s"Room $getRealId is not valid " +
+          s"(unknown labels: <$unknownLabels>, unknown terms: <$unknownTerms>)"
+        ), false
+      )
+    }
+  }
 
 }
 
-object Room {
+object Room extends BaseObj {
+  val `type`: String = "room"
+
   def apply(configId: String, room: scheduler.Room): Room = Room(
-    _id = Base.getCouchId(configId, room.id),
+    _id = Room.getCouchId(configId, room.id),
     config_id = configId,
-    terms = room.terms map { Base.getCouchId(configId, _) },
-    labels = room.labels map { Base.getCouchId(configId, _) }
+    terms = room.terms map { Term.getCouchId(configId, _) },
+    labels = room.labels map { Label.getCouchId(configId, _) },
+    capacity = room.capacity
   )
 }

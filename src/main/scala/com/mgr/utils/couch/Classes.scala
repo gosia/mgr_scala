@@ -25,7 +25,14 @@ case class CouchResponse(
   ok: Option[Boolean],
   reason: Option[String],
   rev: Option[String]
-)
+) {
+  def errorMsg: Option[String] = {
+    error.isDefined match {
+      case true => Some(s"Error: ${error.get}, reason: ${reason.getOrElse("not given")}")
+      case false => None
+    }
+  }
+}
 
 final case class CouchException(m: String) extends Exception
 

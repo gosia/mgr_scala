@@ -33,15 +33,8 @@ object RedisConfig {
 new SchedulerServiceConfig {
 
   // Ostrich http admin port. Curl this for stats, etc
-  admin.httpPort =  Properties.envOrElse(
-    "CAPRICA_GET_ADMIN_PORT",
-    "19016"
-  ).toInt
-
-  override val thriftPort = Properties.envOrElse(
-    "CAPRICA_GET_PORT",
-    "19015"
-  ).toInt
+  admin.httpPort = 19002
+  override val thriftPort = 19001
 
   override val couchHost = CouchConfig.couchHost
   override val couchPort = CouchConfig.couchPort

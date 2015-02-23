@@ -1,5 +1,6 @@
 package com.mgr.utils.couch
 
+import com.twitter.conversions.time._
 import com.twitter.finagle.builder.ClientBuilder
 import com.twitter.finagle.filter.MaskCancelFilter
 import com.twitter.finagle.http.Http
@@ -11,6 +12,7 @@ import org.apache.http.ConnectionClosedException
 import org.jboss.netty.handler.codec.http._
 import org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1
 
+import com.mgr.utils.couch.Implicits._
 import com.mgr.utils.logging.Logging
 import com.mgr.utils.UtilFuns
 
@@ -33,12 +35,15 @@ case class Client(
       .codec(Http())
       .hosts(s"${this.host}:${this.port}")
       .hostConnectionLimit(1)
+      .tcpConnectTimeout(3.seconds)
+      .timeout(5.seconds)
   }
 
   def add[DocType <: Document: Manifest](doc: DocType): Future[CouchResponse] = {
     log.info(s"COUCH: ADD ${doc._id}")
 
     val content = json.Serialization.write(doc)
+    log.info(s"COUCH: ADD CONTENT $content")
     doRequests("PUT", Some(content), doc._id) map {
       j: String => json.parse(j).extract[CouchResponse]
     }
@@ -57,6 +62,15 @@ case class Client(
     val content = json.Serialization.write(doc)
     doRequests("PUT", Some(content), doc._id) map {
       j: String => json.parse(j).extract[CouchResponse]
+    }
+  }
+
+  def bulkAdd[T <: Document](docs: Seq[T]): Future[Seq[CouchResponse]] = {
+    log.info(s"COUCH: BULK ADD ${docs.size} items")
+    val packedDocs = json.JObject(List(json.JField("docs", json.Extraction.decompose(docs))))
+    val content = json.Serialization.write(packedDocs)
+    doRequests("POST", Some(content), "_bulk_docs") map {
+      j: String => json.parse(j).extract[List[CouchResponse]].toSeq
     }
   }
 
@@ -82,13 +96,10 @@ case class Client(
 
   protected def doRequests(method: String, body: Option[String], id: String): Future[String] = {
     val url = s"/${this.name}/${URLEncoder.encode(id, "UTF-8")}"
-    val m = method match {
-      case "GET" => HttpMethod.GET
-      case "HEAD" => HttpMethod.HEAD
-      case "PUT" => HttpMethod.PUT
-    }
+    val m = HttpMethod.valueOf(method)
     val request = new DefaultHttpRequest(HTTP_1_1, m, url)
     setCommonHeaders(request, method, body)
+    body.map(request.setContent(_))
 
     UtilFuns.retry[HttpResponse, ConnectionClosedException] (3) {
       sendRequest(request)

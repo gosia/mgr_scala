@@ -6,8 +6,9 @@ import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler
 import com.mgr.utils.couch.Client
 import com.mgr.utils.couch.CouchResponse
+import com.mgr.utils.logging.Logging
 
-object ConfigHandler {
+object ConfigHandler extends Logging {
 
   val couchClient = Client("localhost", 6666, "scheduler")
 
@@ -18,19 +19,34 @@ object ConfigHandler {
     teachers: Seq[docs.Teacher],
     groups: Seq[docs.Group],
     labels: Seq[docs.Label]
-  ): Boolean = {
+  ): (Option[String], Boolean) = {
     val termIds = terms map { _._id } toSet
     val roomIds = rooms map { _._id } toSet
     val teacherIds = teachers map { _._id } toSet
     val groupIds = groups map { _._id } toSet
     val labelIds = labels map { _._id } toSet
 
-    terms.forall(_.isValid) &&
-    rooms.forall(_.isValid(termIds, labelIds)) &&
-    teachers.forall(_.isValid(termIds)) &&
-    groups.forall(_.isValid(termIds, labelIds, groupIds))
+    val validated: Seq[(Option[String], Boolean)] =
+      terms.map(_.isValid) ++
+      rooms.map(_.isValid(termIds, labelIds)) ++
+      teachers.map(_.isValid(termIds)) ++
+      groups.map(_.isValid(termIds, labelIds, groupIds))
+
+    val validationResult = validated.foldLeft[(Option[String], Boolean)]((None, true))({
+      case (x, r) => if (x._2) {
+        r
+      } else {
+        (r._1, x._1) match {
+          case (None, None) => (None, false)
+          case (Some(msg), None) => (Some(msg), false)
+          case (None, Some(msg)) => (Some(msg), false)
+          case (Some(msg1), Some(msg2)) => (Some(s"$msg1. $msg2"), false)
+        }
+      }
+    })
 
     // TODO(gosia): Check symmetric of group.sameTermGroups and group.diffTermGroups
+    validationResult
   }
 
   def createConfig(
@@ -40,6 +56,7 @@ object ConfigHandler {
     teachers: Seq[scheduler.Teacher],
     groups: Seq[scheduler.Group]
   ): Future[Unit] = {
+    log.info(s"Adding config $id")
     val termDocs = terms map { docs.Term(id, _) }
     val roomDocs = rooms map { docs.Room(id, _) }
     val teacherDocs = teachers map { docs.Teacher(id, _) }
@@ -51,15 +68,23 @@ object ConfigHandler {
     }) toSeq
     val labelDocs = labelIds map { docs.Label(id, _) }
 
-    if (!isValidConfig(id, termDocs, roomDocs, teacherDocs, groupDocs, labelDocs)) {
-      throw scheduler.SchedulerException("Config is not valid")
+    val valid = isValidConfig(id, termDocs, roomDocs, teacherDocs, groupDocs, labelDocs)
+    if (!valid._2) {
+      throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
     }
 
-    val allDoc = (termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ Seq(configDoc)) map {
-      couchClient.add(_)
-    }
-    val responses: Future[Seq[CouchResponse]] = Future.collect(allDoc)
-    responses map { _ => ()}
+    val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ Seq(configDoc)
+
+    couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+      val errors: Seq[String] = rseq.map(_.errorMsg).flatten
+      errors.length match {
+        case 0 => ()
+        case n if n > 0 => {
+          log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
+          ()
+        }
+      }
+    }}
   }
 
 }

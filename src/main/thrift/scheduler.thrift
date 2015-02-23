@@ -1,4 +1,5 @@
 namespace java com.mgr.thrift.scheduler
+namespace py scheduler
 
 typedef string Id
 
@@ -24,14 +25,15 @@ struct Time {
 
 struct Term {
   1: Id id;
-  2: Time start;
-  3: Time end;
+  2: Time start_time;
+  3: Time end_time;
 }
 
 struct Room {
   1: Id id;
   2: list<string> terms;
   3: list<string> labels;
+  4: i16 capacity;
 }
 
 struct Teacher {
@@ -47,6 +49,7 @@ struct Group {
   5: list<string> diff_term_groups;
   6: list<string> same_term_groups;
   7: i16 terms_num;
+  8: i16 students_num;
 }
 
 service SchedulerService {

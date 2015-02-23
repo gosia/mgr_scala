@@ -17,8 +17,8 @@ final case class Term(
   start: Option[Time],
   end: Option[Time],
 
-  `type`: String = "term"
-) extends couch.Document {
+  `type`: String = Term.`type`
+) extends Base {
 
   private def dateValid(t: Time): Boolean = {
     val dayIsValid = scheduler.Day.valueOf(t.day).isDefined
@@ -39,23 +39,37 @@ final case class Term(
     )
   }
 
-  def isValid: Boolean = {
+  def isValid: (Option[String], Boolean) = {
     (this.start, this.end) match {
-      case (None, None) => true
-      case (Some(_), None) => false
-      case (None, Some(_)) => false
-      case (Some(start), Some(end)) =>
-        dateValid(start) && dateValid(end) && startBeforeEnd(start, end)
+      case (None, None) => (None, true)
+      case (Some(_), None) => (Some(s"Term $getRealId is not valid (only start defined)"), false)
+      case (None, Some(_)) => (Some(s"Term $getRealId is not valid (only end defined)"), false)
+      case (Some(start), Some(end)) => dateValid(start) match {
+        case false => (Some(s"Term $getRealId is not valid (start not valid)"), false)
+        case true => dateValid(end) match {
+          case false => (Some(s"Term $getRealId is not valid (end not valid)"), false)
+          case true => startBeforeEnd(start, end) match {
+            case false => (Some(s"Term $getRealId is not valid (end before start)"), false)
+            case true => (None, true)
+          }
+        }
+      }
     }
   }
 
 }
 
-object Term {
+object Term extends BaseObj {
+  val `type`: String = "term"
+
   def apply(configId: String, term: scheduler.Term): Term = Term(
-    _id = Base.getCouchId(configId, term.id),
+    _id = Term.getCouchId(configId, term.id),
     config_id = configId,
-    start = Some(Time(term.start.day.name.toLowerCase, term.start.hour, term.start.minute)),
-    end = Some(Time(term.end.day.name.toLowerCase, term.end.hour, term.end.minute))
+    start = Some(Time(
+      term.startTime.day.name.toLowerCase,
+      term.startTime.hour,
+      term.startTime.minute
+    )),
+    end = Some(Time(term.endTime.day.name.toLowerCase, term.endTime.hour, term.endTime.minute))
   )
 }

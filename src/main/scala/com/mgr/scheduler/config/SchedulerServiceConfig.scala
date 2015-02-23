@@ -34,7 +34,7 @@ trait RedisConfig {
 class SchedulerServiceConfig extends ServerConfig[SchedulerService.ThriftServer]
   with CouchConfig with RedisConfig
 {
-  val thriftPort: Int = 19015
+  val thriftPort: Int = 19001
   val tracerFactory: Tracer.Factory = NullTracer.factory
 
   val retryDelay: Int = 10

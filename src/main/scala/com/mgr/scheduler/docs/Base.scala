@@ -1,13 +1,16 @@
 package com.mgr.scheduler.docs
 
 import com.mgr.utils.couch
+import com.mgr.utils.logging.Logging
 
-trait Base extends couch.Document {
+trait Base extends couch.Document with Logging {
   val config_id: String
 
-  def getRealId = this._id.split(":").tail.mkString(":")
+  def getRealId = this._id.split(":").tail.tail.mkString(":")
 }
 
-object Base {
-  def getCouchId(configId: String, id: String) = s"$configId:$id"
+trait BaseObj {
+  val `type`: String
+
+  def getCouchId(configId: String, id: String) = s"$configId:${`type`}:$id"
 }

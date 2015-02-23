@@ -28,7 +28,7 @@ class SchedulerServiceImpl(
     teachers: Seq[scheduler.Teacher],
     groups: Seq[scheduler.Group]
   ): Future[Unit] = {
-    Future.Unit handle exceptions
+    handlers.ConfigHandler.createConfig(id, terms, rooms, teachers, groups) handle exceptions
   }
 
 }

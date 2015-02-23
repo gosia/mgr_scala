@@ -5,12 +5,14 @@ final case class Label(
   _rev: Option[String] = None,
   config_id: String,
 
-  `type`: String = "label"
+  `type`: String = Label.`type`
 ) extends Base
 
-object Label {
+object Label extends BaseObj {
+  val `type`: String = "label"
+
   def apply(configId: String, label: String): Label = Label(
-    _id = Base.getCouchId(configId, label),
+    _id = Label.getCouchId(configId, label),
     config_id = configId
   )
 }
