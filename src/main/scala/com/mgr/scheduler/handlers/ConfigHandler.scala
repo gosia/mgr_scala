@@ -1,11 +1,14 @@
 package com.mgr.scheduler.handlers
 
 import com.twitter.util.Future
+import net.liftweb.json
 
 import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler
+import com.mgr.thrift.scheduler.TaskStatus
 import com.mgr.utils.couch.Client
 import com.mgr.utils.couch.CouchResponse
+import com.mgr.utils.couch.ViewResult
 import com.mgr.utils.logging.Logging
 
 object ConfigHandler extends Logging {
@@ -21,8 +24,6 @@ object ConfigHandler extends Logging {
     labels: Seq[docs.Label]
   ): (Option[String], Boolean) = {
     val termIds = terms map { _._id } toSet
-    val roomIds = rooms map { _._id } toSet
-    val teacherIds = teachers map { _._id } toSet
     val groupIds = groups map { _._id } toSet
     val labelIds = labels map { _._id } toSet
 
@@ -79,14 +80,21 @@ object ConfigHandler extends Logging {
       val errors: Seq[String] = rseq.map(_.errorMsg).flatten
       errors.length match {
         case 0 => ()
-        case n if n > 0 => {
+        case n if n > 0 =>
           log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
           ()
-        }
       }
     }}
   }
 
-  def getConfigTasks(configId: String): Future[Seq[scheduler.TaskInfo]] = ???
+  def getConfigTasks(configId: String): Future[Seq[scheduler.TaskInfo]] = {
+    log.info(s"Getting tasks for config $configId")
+
+    val query = couchClient.view("tasks/by_config").startkey(configId).endkey(configId).includeDocs
+
+    query.execute map { result: ViewResult => result mapDocs {
+      doc: docs.Task => scheduler.TaskInfo(doc._id, TaskStatus.valueOf(doc.status).get)
+    }}
+  }
 
 }

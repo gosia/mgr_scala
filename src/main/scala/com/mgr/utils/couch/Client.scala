@@ -27,8 +27,104 @@ case class Client(
   host: String,
   port: Int,
   name: String
-) extends Logging {
-  implicit val formats = json.Serialization.formats(json.NoTypeHints)
+) extends RequestUtils {
+
+  def add[DocType <: Document : Manifest](doc: DocType): Future[CouchResponse] = {
+    log.info(s"COUCH: ADD ${doc._id}")
+    val content = json.Serialization.write(doc)
+    doDocumentRequest("PUT", Some(content), doc._id) map {
+      j: String => json.parse(j).extract[CouchResponse]
+    }
+  }
+
+  def get[DocType <: Document : Manifest](id: String): Future[DocType] = {
+    log.info(s"COUCH: GET $id")
+    doDocumentRequest("GET", None, id) map {
+      j: String => json.parse(j).extract[DocType]
+    }
+  }
+
+  def update[DocType <: Document : Manifest](doc: DocType): Future[CouchResponse] = {
+    log.info(s"COUCH: UPDATE ${doc._id}")
+    val content = json.Serialization.write(doc)
+    doDocumentRequest("PUT", Some(content), doc._id) map {
+      j: String => json.parse(j).extract[CouchResponse]
+    }
+  }
+
+  def bulkAdd[T <: Document](docs: Seq[T]): Future[Seq[CouchResponse]] = {
+    log.info(s"COUCH: BULK ADD ${docs.size} items")
+    val content = json.Serialization.write(Map("docs" -> docs))
+    doBulkRequest("POST", Some(content)) map {
+      j: String => json.parse(j).extract[List[CouchResponse]].toSeq
+    }
+  }
+
+  def view(viewName: String) = ViewQueryBuilder(this.host, this.port, this.name, viewName)
+}
+
+case class ViewQueryBuilder(
+  host: String,
+  port: Int,
+  name: String,
+  viewName: String,
+
+  keys: Option[Seq[Any]] = None,
+  startkey: Option[Any] = None,
+  startkey_docid: Option[String] = None,
+  endkey: Option[Any] = None,
+  endkey_docid: Option[String] = None,
+  limit: Option[Int] = None,
+  reduce: Option[Boolean] = None,
+  include_docs: Option[Boolean] = None
+) extends RequestUtils {
+
+  def startkey(startkey: Any): ViewQueryBuilder = this.copy(startkey=Some(startkey))
+  def endkey(endkey: Any): ViewQueryBuilder = this.copy(endkey=Some(endkey))
+  def limit(limit: Int): ViewQueryBuilder = this.copy(limit=Some(limit))
+  def reduce(reduce: Boolean): ViewQueryBuilder = this.copy(reduce=Some(reduce))
+  def includeDocs: ViewQueryBuilder = this.copy(include_docs=Some(true))
+
+  def execute: Future[ViewResult] = {
+    log.info(s"COUCH: VIEW $viewName")
+    doViewRequest(viewName, queryBody, queryParams) map {
+      j: String => json.parse(j).extract[ViewResult]
+    }
+  }
+
+  private def queryParams: String = {
+    val queryMap = json.Extraction.decompose(this).asInstanceOf[json.JObject]
+      .values.asInstanceOf[Map[String, AnyRef]]
+
+    queryMap
+      .filterKeys(!Set("keys", "host", "port", "name", "viewName").contains(_))
+      .filter({
+        case (k, None) => false
+        case (k, v) => true
+      }) map {
+      case (mapkey, value) =>
+        val cleanedValue: String = mapkey match {
+          case "startkey_docid" => value.toString
+          case _ => json.Serialization.write(value)
+        }
+        "%s=%s".format(
+          URLEncoder.encode(mapkey.toString, "UTF-8"),
+          URLEncoder.encode(cleanedValue, "UTF-8")
+        )
+      } mkString "&"
+  }
+  private def queryBody: Option[String] = {
+    keys map { keyList: Seq[Any] => {
+      Some(json.Serialization.write(Map("keys" -> keyList)))
+    }} getOrElse None
+  }
+}
+
+trait RequestUtils extends Logging {
+
+  val host: String
+  val port: Int
+  val name: String
 
   lazy val couchBuilder = {
     ClientBuilder()
@@ -37,41 +133,6 @@ case class Client(
       .hostConnectionLimit(1)
       .tcpConnectTimeout(3.seconds)
       .timeout(5.seconds)
-  }
-
-  def add[DocType <: Document: Manifest](doc: DocType): Future[CouchResponse] = {
-    log.info(s"COUCH: ADD ${doc._id}")
-
-    val content = json.Serialization.write(doc)
-    log.info(s"COUCH: ADD CONTENT $content")
-    doRequests("PUT", Some(content), doc._id) map {
-      j: String => json.parse(j).extract[CouchResponse]
-    }
-
-  }
-
-  def get[DocType <: Document: Manifest](id: String): Future[DocType] = {
-    log.info(s"COUCH: GET $id")
-    doRequests("GET", None, id) map {
-      j: String => json.parse(j).extract[DocType]
-    }
-  }
-
-  def update[DocType <: Document: Manifest](doc: DocType): Future[CouchResponse] = {
-    log.info(s"COUCH: UPDATE ${doc._id}")
-    val content = json.Serialization.write(doc)
-    doRequests("PUT", Some(content), doc._id) map {
-      j: String => json.parse(j).extract[CouchResponse]
-    }
-  }
-
-  def bulkAdd[T <: Document](docs: Seq[T]): Future[Seq[CouchResponse]] = {
-    log.info(s"COUCH: BULK ADD ${docs.size} items")
-    val packedDocs = json.JObject(List(json.JField("docs", json.Extraction.decompose(docs))))
-    val content = json.Serialization.write(packedDocs)
-    doRequests("POST", Some(content), "_bulk_docs") map {
-      j: String => json.parse(j).extract[List[CouchResponse]].toSeq
-    }
   }
 
   private def setCommonHeaders(
@@ -94,8 +155,33 @@ case class Client(
     filter(request, client)
   }
 
-  protected def doRequests(method: String, body: Option[String], id: String): Future[String] = {
-    val url = s"/${this.name}/${URLEncoder.encode(id, "UTF-8")}"
+  protected def doDocumentRequest(
+    method: String, body: Option[String], id: String
+  ): Future[String] = {
+    doRequest(
+      (method: String, body: Option[String]) => s"/${this.name}/${URLEncoder.encode(id, "UTF-8")}"
+    )(method, body)
+  }
+
+  protected def doBulkRequest(method: String, body: Option[String]): Future[String] = {
+    doRequest(
+      (method: String, body: Option[String]) => s"/${this.name}/_bulk_docs"
+    )(method, body)
+  }
+
+  protected def doViewRequest(
+    viewName: String, body: Option[String], params: String
+  ): Future[String] = {
+    doRequest(
+      (_: String, _: Option[String]) =>
+        s"/${this.name}/_design/${viewName.split("/")(0)}/_view/${viewName.split("/")(1)}?$params"
+    )(body.map(_ => "POST").getOrElse("GET"), body)
+  }
+
+  protected def doRequest(
+    getId: (String, Option[String]) => String
+  )(method: String, body: Option[String]): Future[String] = {
+    val url = getId(method, body)
     val m = HttpMethod.valueOf(method)
     val request = new DefaultHttpRequest(HTTP_1_1, m, url)
     setCommonHeaders(request, method, body)

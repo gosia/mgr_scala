@@ -2,6 +2,9 @@ package com.mgr.utils.couch
 
 import com.twitter.finagle.builder.ClientBuilder
 import com.twitter.finagle.http.Http
+import net.liftweb.json
+
+import com.mgr.utils.logging.Logging
 
 final case class BulkDoc[T <: Document](docs: Seq[T])
 
@@ -45,5 +48,24 @@ trait Document {
   val _id: String
   val _rev: Option[String]
   val `type`: String
+
+}
+
+final case class ViewRow(
+  id: String,
+  key: json.JValue,
+  value: json.JValue,
+  doc: json.JValue
+)
+
+final case class ViewResult(
+  total_rows: Int,
+  offset: Int,
+  rows: Seq[ViewRow]
+) {
+
+  def mapDocs[DocType: Manifest, T](f: DocType => T): Seq[T] = {
+    rows map { _.doc.extract[DocType] } map f
+  }
 
 }
