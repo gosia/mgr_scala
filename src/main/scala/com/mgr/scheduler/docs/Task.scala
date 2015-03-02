@@ -2,12 +2,6 @@ package com.mgr.scheduler.docs
 
 import com.mgr.thrift.scheduler
 
-final case class GroupRoomTerm(
-  group: String,
-  room: String,
-  term: String
-)
-
 final case class Task(
   _id: String,
   _rev: Option[String] = None,

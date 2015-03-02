@@ -40,6 +40,8 @@ final case class Group(
       )
     }
 
+  def toTxt: String = getRealId
+
 }
 
 object Group extends BaseObj {

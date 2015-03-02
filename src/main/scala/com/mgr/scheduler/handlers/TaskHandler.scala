@@ -15,20 +15,21 @@ object TaskHandler extends Logging {
   def getTaskResult(taskId: String): Future[scheduler.Timetable] = {
     log.info(s"Getting task results for task $taskId")
 
-    couchClient.get[docs.Task](taskId) map { doc =>
+    couchClient.get[docs.Task](taskId) flatMap { doc =>
       if (doc.status != scheduler.TaskStatus.Finished.name.toLowerCase) {
         throw scheduler.SchedulerException(s"Task is not finished (status - ${doc.status})")
       }
 
-      doc.timetable map { timetable: Seq[docs.GroupRoomTerm] => scheduler.Timetable({
-          timetable map { x => (
-            x.group,
-            scheduler.PlaceAndTime(
-              term=docs.Term.getRealId(x.term), room=docs.Room.getRealId(x.room)
-            )
-          ) } toMap
-        })
-      } getOrElse(throw scheduler.SchedulerException("Document missing timetable"))
+      val timetable: Seq[docs.GroupRoomTerm] = doc.timetable getOrElse(
+        throw scheduler.SchedulerException("Document missing timetable")
+      )
+
+      docs.GroupRoomTerm.toThriftString(doc.config_id, timetable) map { timetablestr: String =>
+        scheduler.Timetable(
+          docs.GroupRoomTerm.toThriftTimetable(timetable),
+          timetablestr
+        )
+      }
 
     }
   }

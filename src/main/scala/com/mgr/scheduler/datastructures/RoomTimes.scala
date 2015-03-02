@@ -30,23 +30,6 @@ case class RoomTimes(
     )
   }
 
-  def drawRandom(group: docs.Group): RoomTimes = {
-
-    val validRoomIds = validators.Room.getIds(group, rooms)
-    val validTermIds = validators.Term.getIds(group, allTerms, timetable, teacherMap)
-
-    val validRoomTimes = remainingRoomTimes.filterNot({
-      case (roomId, termId) => validRoomIds.contains(roomId) && validTermIds.contains(termId)
-    })
-
-    if (validRoomTimes.length == 0) {
-      throw scheduler.SchedulerException("No room time to pick from!")
-    }
-    val nextRoomTime = remainingRoomTimes(Random.nextInt(remainingRoomTimes.size))
-
-    transition(group, nextRoomTime)
-  }
-
 }
 
 object RoomTimes extends Logging {

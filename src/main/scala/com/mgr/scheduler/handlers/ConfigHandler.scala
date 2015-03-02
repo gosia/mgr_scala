@@ -124,4 +124,35 @@ object ConfigHandler extends Logging {
     }}
   }
 
+  def getConfigDefMap(
+    configId: String
+  ): Future[(
+    Map[String, docs.Group], Map[String, docs.Teacher],
+    Map[String, docs.Room], Map[String, docs.Term]
+  )] = {
+    log.info(s"Getting definition for config $configId")
+
+    val groupQ = couchClient.view("groups/by_config")
+      .startkey(configId).endkey(configId).includeDocs
+    val teacherQ = couchClient.view("teachers/by_config")
+      .startkey(configId).endkey(configId).includeDocs
+    val roomQ = couchClient.view("rooms/by_config").startkey(configId).endkey(configId).includeDocs
+    val termQ = couchClient.view("terms/by_config").startkey(configId).endkey(configId).includeDocs
+
+    groupQ.execute flatMap { groupR: ViewResult => {
+      teacherQ.execute flatMap { teacherR: ViewResult => {
+        roomQ.execute flatMap { roomR: ViewResult => {
+          termQ.execute map { termR: ViewResult =>
+            (
+              groupR.docs[docs.Group] map { x => (x._id, x) } toMap,
+              teacherR.docs[docs.Teacher] map { x => (x._id, x) } toMap,
+              roomR.docs[docs.Room] map { x => (x._id, x) } toMap,
+              termR.docs[docs.Term] map { x => (x._id, x) } toMap
+            )
+          }
+        }}
+      }}
+    }}
+  }
+
 }

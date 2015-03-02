@@ -13,7 +13,7 @@ import com.mgr.thrift.scheduler
 
 
 case class Random() extends Base with Logging {
-  def drawRandom(group: docs.Group, rt: RoomTimes): (String, String) = {
+  def drawRandom(group: docs.Group, rt: RoomTimes): Seq[(String, String)] = {
     log.info(s"Drawing random number for group ${group._id}")
 
     val validRoomIds = validators.Room.getIds(group, rt.rooms)
@@ -29,7 +29,7 @@ case class Random() extends Base with Logging {
 
     val newRoomTime = validRoomTimes(ScalaRandom.nextInt(validRoomTimes.size))
     log.info(s"Draw random value: room ${newRoomTime._1}, time: ${newRoomTime._2}")
-    newRoomTime
+    Seq(newRoomTime)
   }
 
   def start(task: docs.Task): Future[Unit] = {
@@ -43,7 +43,9 @@ case class Random() extends Base with Logging {
 
         val rt = RoomTimes(rooms, terms, teachers)
         val lastRt = groups.foldLeft(rt) {
-          case (oldRt, group) => oldRt.transition(group, drawRandom(group, oldRt))
+          case (oldRt, group) =>
+            val newTimes = drawRandom(group, oldRt)
+            newTimes.foldLeft(oldRt)({ case (newRt, newTime) => newRt.transition(group, newTime)})
         }
         val newDoc = task.finish(lastRt.timetable)
         couchClient.update(newDoc) map { _ => () }

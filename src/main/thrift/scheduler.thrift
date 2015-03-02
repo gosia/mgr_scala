@@ -74,6 +74,7 @@ struct PlaceAndTime {
 
 struct Timetable {
   1: map<Id, PlaceAndTime> group_to_place_and_time;
+  2: string human_readable;
 }
 
 service SchedulerService {

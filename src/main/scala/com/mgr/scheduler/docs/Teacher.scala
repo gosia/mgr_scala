@@ -21,6 +21,8 @@ final case class Teacher(
     }
   }
 
+  def toTxt: String = getRealId
+
 }
 
 object Teacher extends BaseObj {

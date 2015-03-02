@@ -29,6 +29,8 @@ final case class Room(
     }
   }
 
+  def toTxt: String = s"room $getRealId"
+
 }
 
 object Room extends BaseObj {

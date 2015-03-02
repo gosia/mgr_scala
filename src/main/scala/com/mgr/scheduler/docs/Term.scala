@@ -56,6 +56,21 @@ final case class Term(
     }
   }
 
+  def toTxt: String = {
+    if (start.isDefined && end.isDefined) {
+      val s = start.get
+      val e = end.get
+      if (s.day == e.day) {
+        f"${s.day} ${s.hour}%02d:${s.minute}%02d-${e.hour}%02d:${e.minute}%02d"
+      } else {
+        f"${s.day} ${s.hour}%02d:${s.minute}%02d-" +
+          f"${s.day} ${e.hour}%02d:${e.minute}%02d"
+      }
+    } else {
+      _id
+    }
+  }
+
 }
 
 object Term extends BaseObj {
