@@ -94,9 +94,15 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
-  Id startTask(
+  Id createTask(
     1: Id configId;
     2: Algorithm algorithm;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  void startTask(
+    1: Id taskId;
   ) throws (
     1: SchedulerException se;
   )

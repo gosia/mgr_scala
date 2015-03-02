@@ -1,6 +1,5 @@
 package com.mgr.scheduler.docs
 
-import com.mgr.utils.couch
 import com.mgr.thrift.scheduler
 
 final case class Time(

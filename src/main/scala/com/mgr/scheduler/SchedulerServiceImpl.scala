@@ -43,8 +43,12 @@ class SchedulerServiceImpl(
     handlers.TaskHandler.getTaskStatus(taskId) handle exceptions
   }
 
-  def startTask(configId: String, algorithm: scheduler.Algorithm): Future[String] = {
-    handlers.TaskHandler.startTask(configId, algorithm) handle exceptions
+  def createTask(configId: String, algorithm: scheduler.Algorithm): Future[String] = {
+    handlers.TaskHandler.createTask(configId, algorithm) handle exceptions
+  }
+
+  def startTask(taskId: String): Future[Unit] = {
+    handlers.TaskHandler.startTask(taskId) handle exceptions
   }
 
 }
