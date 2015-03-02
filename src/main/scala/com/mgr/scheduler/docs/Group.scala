@@ -2,6 +2,11 @@ package com.mgr.scheduler.docs
 
 import com.mgr.thrift.scheduler
 
+final case class GroupExtra(
+  course: String,
+  group_type: String
+)
+
 final case class Group(
   _id: String,
   _rev: Option[String] = None,
@@ -14,6 +19,8 @@ final case class Group(
   terms: Seq[String],
   terms_num: Int,
   students_num: Int,
+
+  extra: Option[GroupExtra],
 
   `type`: String = Group.`type`
 ) extends Base {
@@ -40,7 +47,12 @@ final case class Group(
       )
     }
 
-  def toTxt: String = getRealId
+  def toTxt: String = {
+    extra match {
+      case None => getRealId
+      case Some(ge) => s"${ge.course} (${ge.group_type})"
+    }
+  }
 
 }
 
@@ -56,6 +68,7 @@ object Group extends BaseObj {
     terms_num = group.termsNum,
     diff_term_groups = group.diffTermGroups map { Group.getCouchId(configId, _) },
     same_term_groups = group.sameTermGroups map { Group.getCouchId(configId, _) },
-    students_num = group.studentsNum
+    students_num = group.studentsNum,
+    extra = group.extra.map(e => GroupExtra(course = e.course, group_type=e.groupType))
   )
 }

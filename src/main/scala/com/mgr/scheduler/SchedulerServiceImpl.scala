@@ -15,10 +15,10 @@ class SchedulerServiceImpl(
 
   def exceptions: PartialFunction[Throwable, Nothing] = {
     case e =>
-      log.warning(s"Unexpected exception - ${e.toString}:${e.getMessage}")
-      // Exception messages which are null are not useful. Get the exception class instead.
-      val message: String = if (e.getMessage != null) e.getMessage else e.toString
-      throw e
+      val stacktrace = e.getStackTraceString
+      val message = s"Unexpected exception - ${e.toString}:${e.getMessage}\n$stacktrace"
+      log.warning(message)
+      throw scheduler.SchedulerException(message)
   }
 
   def createConfig(

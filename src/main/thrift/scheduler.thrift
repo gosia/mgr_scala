@@ -18,7 +18,6 @@ enum Day {
 }
 
 struct Time {
-  1: Day day;
   2: i16 hour;
   3: i16 minute;
 }
@@ -27,6 +26,7 @@ struct Term {
   1: Id id;
   2: Time start_time;
   3: Time end_time;
+  4: Day day;
 }
 
 struct Room {
@@ -41,6 +41,11 @@ struct Teacher {
   2: list<string> terms;
 }
 
+struct GroupExtra {
+  1: string course;
+  2: string group_type;
+}
+
 struct Group {
   1: Id id;
   2: list<string> teachers;
@@ -50,6 +55,7 @@ struct Group {
   6: list<string> same_term_groups;
   7: i16 terms_num;
   8: i16 students_num;
+  9: optional GroupExtra extra;
 }
 
 enum Algorithm {

@@ -1,10 +1,6 @@
 package com.mgr.scheduler.datastructures
 
-import scala.util.Random
-
 import com.mgr.scheduler.docs
-import com.mgr.scheduler.validators
-import com.mgr.thrift.scheduler
 import com.mgr.utils.logging.Logging
 
 
@@ -14,6 +10,7 @@ case class RoomTimes(
   allTerms: Set[String],
   teacherMap: Map[String, Set[String]],
   remainingRoomTimes: Seq[(String, String)]
+  //remainingRoomTimesByNum: Map[Int, Seq[Seq[(String, String)]]]
 ) {
 
   def transition(group: docs.Group, nextRoomTime: (String, String)): RoomTimes = {
