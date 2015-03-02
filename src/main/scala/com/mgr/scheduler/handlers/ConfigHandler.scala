@@ -1,7 +1,6 @@
 package com.mgr.scheduler.handlers
 
 import com.twitter.util.Future
-import net.liftweb.json
 
 import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler

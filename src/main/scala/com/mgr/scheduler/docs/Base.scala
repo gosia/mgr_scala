@@ -13,4 +13,5 @@ trait BaseObj {
   val `type`: String
 
   def getCouchId(configId: String, id: String) = s"$configId:${`type`}:$id"
+  def getRealId(doc_id: String) = doc_id.split(":").tail.tail.mkString(":")
 }

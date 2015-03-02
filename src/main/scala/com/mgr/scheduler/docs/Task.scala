@@ -16,6 +16,8 @@ final case class Task(
   status: String,
   timetable: Option[Seq[GroupRoomTerm]],
 
+  algorithm: String,
+
   `type`: String = Task.`type`
 ) extends Base {
 
@@ -37,10 +39,11 @@ final case class Task(
 object Task extends BaseObj {
   val `type`: String = "task"
 
-  def apply(configId: String): Task = Task(
+  def apply(configId: String, algorithm: scheduler.Algorithm): Task = Task(
     _id = Task.getCouchId(configId, java.util.UUID.randomUUID.toString),
     config_id = configId,
     status = scheduler.TaskStatus.NotStarted.name.toLowerCase,
-    timetable = None
+    timetable = None,
+    algorithm = algorithm.name.toLowerCase
   )
 }
