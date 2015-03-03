@@ -16,15 +16,9 @@
       <name>Twitter</name>
       <url>http://maven.twttr.com/</url>
     </repository>
-    <repository>
-      <id>project.local</id>
-      <name>project</name>
-      <url>file:/Users/gosiaju/.m2/repository</url>
-    </repository>
   </repositories>
 
   <dependencies>
-     <!-- common library dependencies -->
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
@@ -116,8 +110,8 @@
           <failOnWarning>true</failOnWarning>
           <sourceDirectory>${basedir}/src/main/scala</sourceDirectory>
           <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
-          <configLocation>${basedir}/../lib/scalastyle_config.xml</configLocation>
-          <outputFile>${basedir}/scalastyle-output.xml</outputFile>
+          <configLocation>${basedir}/test/scalastyle_config.xml</configLocation>
+          <outputFile>${basedir}/test/results/scalastyle-output.xml</outputFile>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
         <executions>

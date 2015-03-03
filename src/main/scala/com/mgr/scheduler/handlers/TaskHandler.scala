@@ -12,6 +12,19 @@ object TaskHandler extends Logging {
 
   val couchClient = Client("localhost", 6666, "scheduler")
 
+  def backendExceptions: PartialFunction[Throwable, Nothing] = {
+    case e: scheduler.SchedulerException => {
+      val message = s"Unexpected exception - ${e.toString}:${e.getMessage}\n"
+      log.warning(message)
+      throw e
+    }
+    case e =>
+      val stacktrace = e.getStackTraceString
+      val message = s"Unexpected exception - ${e.toString}:${e.getMessage}\n$stacktrace"
+      log.warning(message)
+      throw scheduler.SchedulerException(message)
+  }
+
   def getTaskResult(taskId: String): Future[scheduler.Timetable] = {
     log.info(s"Getting task results for task $taskId")
 
@@ -55,7 +68,7 @@ object TaskHandler extends Logging {
 
       couchClient.update(doc.startProcessing()) map { _ =>
         couchClient.get[docs.Task](taskId) map { doc => {
-          algorithms.Dispatcher.start(doc)
+          algorithms.Dispatcher.start(doc) handle backendExceptions
         }}
       }
 

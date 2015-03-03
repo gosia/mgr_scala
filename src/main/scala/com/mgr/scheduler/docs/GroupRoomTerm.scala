@@ -15,24 +15,34 @@ object GroupRoomTerm {
 
   def toThriftTimetable(
     timetable: Seq[GroupRoomTerm]
-  ): Map[String, scheduler.PlaceAndTime] = {
-    timetable map { x => (
-      x.group,
-      scheduler.PlaceAndTime(
-        term=Term.getRealId(x.term), room=Room.getRealId(x.room)
-      )
-      ) } toMap
+  ): Map[String, Seq[scheduler.PlaceAndTime]] = {
+    byGroupId(timetable) mapValues { _.map(x => scheduler.PlaceAndTime(
+      term=Term.getRealId(x.term), room=Room.getRealId(x.room)
+    ))}
+  }
+
+  def byGroupId(timetable: Seq[GroupRoomTerm]): Map[String, Seq[GroupRoomTerm]] = {
+    timetable.foldLeft[Map[String, Seq[GroupRoomTerm]]](Map())({ case (m, x) =>
+      m.get(x.group) match {
+        case None => m + (x.group -> Seq(x))
+        case Some(_) => m.map({case (k, v) => k == x.group match {
+          case true => (k, v ++ Seq(x))
+          case false => (k, v)
+        }}).toMap
+      }
+    })
   }
 
   def toThriftString(configId: String, timetable: Seq[GroupRoomTerm]): Future[String] = {
 
-    val timetableMap = timetable.map(x => (x.group, x)).toMap
+    val timetableMap = byGroupId(timetable)
 
     ConfigHandler.getConfigDefMap(configId) map {
       case (groupMap, teacherMap, roomMap, termMap) => {
 
-        def toTxtTimetable(group: Group, room: Room, term: Term): String = {
-          s"${term.toTxt}, ${group.toTxt}, ${room.toTxt}"
+        def toTxtTimetable(group: Group, room: Room, term: Term, teachers: Seq[Teacher]): String = {
+          val teacherStr = teachers.map(_.toTxt).mkString(", ")
+          s"${term.toTxt}; ${group.toTxt}; ${room.toTxt}; $teacherStr"
         }
 
         def ppTeacher(teacherId: String): String = {
@@ -45,12 +55,15 @@ object GroupRoomTerm {
 
         def formatValues(data: Map[String, Seq[String]]) = {
           data.mapValues(_.map(groupId => {
-            val t: GroupRoomTerm = timetableMap.get(groupId).get
-            val room = roomMap.get(t.room).get
-            val term = termMap.get(t.term).get
-            val group = groupMap.get(t.group).get
-            (group, room, term)
-          }).sortBy(_._3._id).map(x => toTxtTimetable(x._1, x._2, x._3)))
+            val tx: Seq[GroupRoomTerm] = timetableMap.get(groupId).get
+            tx.map { t => {
+              val room = roomMap.get(t.room).get
+              val term = termMap.get(t.term).get
+              val group = groupMap.get(t.group).get
+              val teachers = groupMap.get(t.group).get.teachers.map(teacherMap(_))
+              (group, room, term, teachers)
+            } }
+          }).flatten.sortBy(_._3._id).map(x => toTxtTimetable(x._1, x._2, x._3, x._4)))
         }
 
         val byTeachers: String = formatValues(groupMap.map({
@@ -64,7 +77,7 @@ object GroupRoomTerm {
         val byRooms: String = formatValues(
           timetable.map(x => {
             (x.room, x.group)
-          }).groupBy(_._1).mapValues(_.map(_._2))
+          }).groupBy(_._1).mapValues(_.map(_._2).toSet.toSeq)
         ).map({
           case (roomId, rt) => s"${ppRoom(roomId)}\n${rt.mkString("\n")}"
         }).mkString("\n\n\n")

@@ -1,19 +1,15 @@
-import com.twitter.logging.config.BareFormatterConfig
-import com.twitter.logging.config.FileHandlerConfig
-import com.twitter.logging.config.LoggerConfig
 import com.twitter.logging.config._
+
 
 import com.mgr.scheduler.config.SchedulerServiceConfig
 
-new SchedulerServiceConfig {
 
-  // Ostrich http admin port. Curl this for stats, etc
-  admin.httpPort = 19002
-  override val thriftPort = 19001
+new SchedulerServiceConfig {
+  admin.httpPort = 9111
 
   loggers =
     new LoggerConfig {
-      level = Level.DEBUG
+      level = Level.INFO
       handlers = new FileHandlerConfig {
         filename = "scheduler.log"
         roll = Policy.Daily
@@ -28,3 +24,5 @@ new SchedulerServiceConfig {
       }
     }
 }
+
+

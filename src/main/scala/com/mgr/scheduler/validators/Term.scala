@@ -6,18 +6,19 @@ import com.mgr.utils.logging.Logging
 object Term extends Logging {
 
   def validSameGroup(
-    group: docs.Group, allTerms: Set[String], timetable: Map[String, (String, String)]
+    group: docs.Group, allTerms: Set[String], timetable: Map[String, Seq[(String, String)]]
   ): Set[String] = {
     group.same_term_groups.length match {
       case 0 => allTerms
-      case n if n > 0 => group.same_term_groups.map(timetable.get(_)).flatten.map(_._2).toSet
+      case n if n > 0 =>
+        group.same_term_groups.map(timetable.get(_)).flatten.flatten.map(_._2).toSet
     }
   }
 
   def validDiffGroup(
-    group: docs.Group, allTerms: Set[String], timetable: Map[String, (String, String)]
+    group: docs.Group, allTerms: Set[String], timetable: Map[String, Seq[(String, String)]]
   ): Set[String] = {
-    allTerms -- group.diff_term_groups.map(timetable.get(_)).flatten.map(_._2).toSet
+    allTerms -- group.diff_term_groups.map(timetable.get(_)).flatten.flatten.map(_._2).toSet
   }
 
   def validTeachers(group: docs.Group, teacherMap: Map[String, Set[String]]): Set[String] = {
@@ -28,7 +29,7 @@ object Term extends Logging {
   def getIds(
     group: docs.Group,
     allTerms: Set[String],
-    timetable: Map[String, (String, String)],
+    timetable: Map[String, Seq[(String, String)]],
     teacherMap: Map[String, Set[String]]
   ): Set[String] = {
     log.info(s"Getting valid term ids for group ${group._id}")

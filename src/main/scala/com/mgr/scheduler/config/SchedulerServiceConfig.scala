@@ -11,19 +11,6 @@ import com.mgr.thrift.scheduler.SchedulerService
 trait CouchConfig {
   val couchHost: String = "localhost"
   val couchPort: Int = 6666
-
-  // dbs
-  val recipeDb = "recipes"
-  val recipeVersionDb = "recipe_versions"
-  val recipeTransDb = "recipe_trans"
-
-  val ingredientDb = "ingredient"
-  val ingredientVersionDb = "ingredient_versions"
-  val ingredientTransDb = "ingredient_trans"
-
-  val skillDb = "skill"
-  val skillVersionDb = "skill_versions"
-  val skillTransDb = "skill_trans"
 }
 
 trait RedisConfig {
@@ -31,9 +18,7 @@ trait RedisConfig {
   val redisPort = 6379
 }
 
-class SchedulerServiceConfig extends ServerConfig[SchedulerService.ThriftServer]
-  with CouchConfig with RedisConfig
-{
+class SchedulerServiceConfig extends ServerConfig[SchedulerService.ThriftServer] {
   val thriftPort: Int = 19001
   val tracerFactory: Tracer.Factory = NullTracer.factory
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="5.0">
+ <file name="/Users/gosiaju/Code/mgr/scheduler/src/main/scala/com/mgr/scheduler/datastructures/RoomTimes.scala">
+  <error column="36" line="4" source="org.scalastyle.file.RegexChecker" severity="warning" message="Regular expression matched '\n\n\n'"></error>
+  <error column="58" line="93" source="org.scalastyle.file.RegexChecker" severity="warning" message="Regular expression matched '\n\n\n'"></error>
+ </file>
+ <file name="/Users/gosiaju/Code/mgr/scheduler/src/main/scala/com/mgr/scheduler/algorithms/Random.scala">
+  <error column="31" line="12" source="org.scalastyle.file.RegexChecker" severity="warning" message="Regular expression matched '\n\n\n'"></error>
+ </file>
+ <file name="/Users/gosiaju/Code/mgr/scheduler/src/main/scala/com/mgr/scheduler/docs/Base.scala">
+  <error column="6" line="9" source="org.scalastyle.scalariform.PublicMethodsHaveTypeChecker" severity="warning" message="Public method must have explicit type"></error>
+  <error column="6" line="15" source="org.scalastyle.scalariform.PublicMethodsHaveTypeChecker" severity="warning" message="Public method must have explicit type"></error>
+  <error column="6" line="16" source="org.scalastyle.scalariform.PublicMethodsHaveTypeChecker" severity="warning" message="Public method must have explicit type"></error>
+ </file>
+ <file name="/Users/gosiaju/Code/mgr/scheduler/src/main/scala/com/mgr/scheduler/docs/GroupRoomTerm.scala">
+  <error column="12" line="46" source="org.scalastyle.scalariform.PublicMethodsHaveTypeChecker" severity="warning" message="Public method must have explicit type"></error>
+ </file>
+ <file name="/Users/gosiaju/Code/mgr/scheduler/src/main/scala/com/mgr/utils/couch/Client.scala">
+  <error column="6" line="63" source="org.scalastyle.scalariform.PublicMethodsHaveTypeChecker" severity="warning" message="Public method must have explicit type"></error>
+ </file>
+</checkstyle>

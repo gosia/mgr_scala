@@ -16,20 +16,31 @@ case class Random() extends Base with Logging {
   def drawRandom(group: docs.Group, rt: RoomTimes): Seq[(String, String)] = {
     log.info(s"Drawing random number for group ${group._id}")
 
-    val validRoomIds = validators.Room.getIds(group, rt.rooms)
-    val validTermIds = validators.Term.getIds(group, rt.allTerms, rt.timetable, rt.teacherMap)
+    group.terms_num match {
+      case 0 => Seq()
+      case _ =>
+        val validRoomIds = validators.Room.getIds(group, rt.rooms)
+        val validTermIds = validators.Term.getIds(group, rt.allTerms, rt.timetable, rt.teacherMap)
 
-    val validRoomTimes = rt.remainingRoomTimes.filterNot({
-      case (roomId, termId) => validRoomIds.contains(roomId) && validTermIds.contains(termId)
-    })
+        val validRoomTimes = rt.remainingRoomTimes.filterNot({
+          case (roomId, termId) => validRoomIds.contains(roomId) && validTermIds.contains(termId)
+        })
 
-    if (validRoomTimes.length == 0) {
-      throw scheduler.SchedulerException("No room time to pick from!")
+        if (validRoomTimes.length == 0) {
+          throw scheduler.SchedulerException("No room time to pick from!")
+        }
+
+        val validRoomTimesByNum: Seq[Seq[(String, String)]] =
+          rt.getRemainingRoomTimesByNum(validRoomTimes, group.terms_num)
+
+        if (validRoomTimesByNum.length == 0) {
+          throw scheduler.SchedulerException("No num room time to pick from!")
+        }
+
+        val newRoomTimes = validRoomTimesByNum(ScalaRandom.nextInt(validRoomTimesByNum.size))
+        log.info(s"Draw random values: $newRoomTimes")
+        newRoomTimes
     }
-
-    val newRoomTime = validRoomTimes(ScalaRandom.nextInt(validRoomTimes.size))
-    log.info(s"Draw random value: room ${newRoomTime._1}, time: ${newRoomTime._2}")
-    Seq(newRoomTime)
   }
 
   def start(task: docs.Task): Future[Unit] = {

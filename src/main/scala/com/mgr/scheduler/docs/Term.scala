@@ -57,6 +57,31 @@ final case class Term(
     }
   }
 
+  def isNext(that: Term): Boolean = {
+    val maxMinuteDiff = 30 // TODO(gosia): move to config
+
+    val dayDiff = scheduler.Day.valueOf(day).get.value - scheduler.Day.valueOf(that.day).get.value
+
+    val t1 = end.hour * 60 + end.minute
+    val t2 = that.start.hour * 60 + that.start.minute
+    val minuteDiff =  t2 - t1
+
+    dayDiff == 0 && minuteDiff > 0 && minuteDiff < maxMinuteDiff
+  }
+
+  def findNext(terms: Seq[Term]): Option[Term] = {
+    val next = terms.foldLeft[Option[Term]](None) { case (result, t) => {
+      result match {
+        case Some(_) => result
+        case None => isNext(t) match {
+          case true => Some(t)
+          case false => None
+        }
+      }
+    }}
+    next
+  }
+
 }
 
 object Term extends BaseObj {

@@ -1,6 +1,5 @@
 package com.mgr.scheduler
 
-import com.twitter.ostrich.stats.Stats
 import com.twitter.util.Future
 
 import com.mgr.scheduler.config.SchedulerServiceConfig
@@ -14,6 +13,7 @@ class SchedulerServiceImpl(
   override val tracerFactory = config.tracerFactory
 
   def exceptions: PartialFunction[Throwable, Nothing] = {
+    case e: scheduler.SchedulerException => throw e
     case e =>
       val stacktrace = e.getStackTraceString
       val message = s"Unexpected exception - ${e.toString}:${e.getMessage}\n$stacktrace"

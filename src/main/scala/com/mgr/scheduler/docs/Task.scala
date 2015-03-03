@@ -15,11 +15,15 @@ final case class Task(
   `type`: String = Task.`type`
 ) extends Base {
 
-  def finish(timetable: Map[String, (String, String)]): Task = {
+  def finish(timetable: Map[String, Seq[(String, String)]]): Task = {
     this.copy(
       status=scheduler.TaskStatus.Finished.name.toLowerCase,
       timetable=Some(
-        timetable.toSeq.map({case (group, (room, term)) => GroupRoomTerm(group, room, term)})
+        timetable.toSeq.map({
+          case (group, xs) => xs.map({
+            case (room, term) => GroupRoomTerm(group, room, term)
+          })
+        }).flatten
       )
     )
   }
