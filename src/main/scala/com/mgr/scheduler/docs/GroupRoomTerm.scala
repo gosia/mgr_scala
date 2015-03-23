@@ -23,9 +23,10 @@ object GroupRoomTerm {
 
   def byGroupId(timetable: Seq[GroupRoomTerm]): Map[String, Seq[GroupRoomTerm]] = {
     timetable.foldLeft[Map[String, Seq[GroupRoomTerm]]](Map())({ case (m, x) =>
-      m.get(x.group) match {
-        case None => m + (x.group -> Seq(x))
-        case Some(_) => m.map({case (k, v) => k == x.group match {
+      val groupKey = Group.getRealId(x.group)
+      m.get(groupKey) match {
+        case None => m + (groupKey -> Seq(x))
+        case Some(_) => m.map({case (k, v) => k == groupKey match {
           case true => (k, v ++ Seq(x))
           case false => (k, v)
         }}).toMap
@@ -55,7 +56,7 @@ object GroupRoomTerm {
 
         def formatValues(data: Map[String, Seq[String]]) = {
           data.mapValues(_.map(groupId => {
-            val tx: Seq[GroupRoomTerm] = timetableMap.get(groupId).get
+            val tx: Seq[GroupRoomTerm] = timetableMap.get(Group.getRealId(groupId)).get
             tx.map { t => {
               val room = roomMap.get(t.room).get
               val term = termMap.get(t.term).get
