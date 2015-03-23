@@ -5,7 +5,11 @@ import com.mgr.thrift.scheduler
 final case class Time(
   hour: Int,
   minute: Int
-)
+) {
+  def asThrift = scheduler.Time(
+    this.hour.toShort, this.minute.toShort
+  )
+}
 
 final case class Term(
   _id: String,
@@ -81,6 +85,13 @@ final case class Term(
     }}
     next
   }
+
+  def asThrift: scheduler.Term = scheduler.Term(
+    this.getRealId,
+    this.start.asThrift,
+    this.end.asThrift,
+    scheduler.Day.valueOf(this.day).get
+  )
 
 }
 

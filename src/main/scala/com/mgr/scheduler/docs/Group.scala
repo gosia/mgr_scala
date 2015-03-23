@@ -54,6 +54,21 @@ final case class Group(
     }
   }
 
+  def asThrift = scheduler.Group(
+    id=this.getRealId,
+    teachers=this.teachers.map(Teacher.getRealId(_)),
+    terms=this.terms.map(Term.getRealId(_)),
+    labels=this.labels.map(Label.getRealId(_)),
+    diffTermGroups=this.diff_term_groups.map(Group.getRealId(_)),
+    sameTermGroups=this.same_term_groups.map(Group.getRealId(_)),
+    termsNum=this.terms_num.toShort,
+    studentsNum=this.students_num.toShort,
+    extra=this.extra.map(extra => scheduler.GroupExtra(
+      course=extra.course,
+      groupType=extra.group_type
+    ))
+  )
+
 }
 
 object Group extends BaseObj {

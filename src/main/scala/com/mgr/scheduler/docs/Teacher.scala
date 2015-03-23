@@ -23,6 +23,11 @@ final case class Teacher(
 
   def toTxt: String = getRealId
 
+  def asThrift = scheduler.Teacher(
+    this.getRealId,
+    this.terms.map(Term.getRealId(_))
+  )
+
 }
 
 object Teacher extends BaseObj {

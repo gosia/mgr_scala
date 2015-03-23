@@ -4,7 +4,6 @@ import com.twitter.util.Future
 
 import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler
-import com.mgr.thrift.scheduler.TaskStatus
 import com.mgr.utils.couch.Client
 import com.mgr.utils.couch.CouchResponse
 import com.mgr.utils.couch.ViewResult
@@ -142,6 +141,18 @@ object ConfigHandler extends Logging {
           }
         }}
       }}
+    }}
+  }
+
+  def getConfigInfo(configId: String): Future[scheduler.ConfigInfo] = {
+    getConfigDef(configId) map { case (groups, teachers, rooms, terms) => {
+      scheduler.ConfigInfo(
+        configId,
+        terms.map(_.asThrift),
+        rooms.map(_.asThrift),
+        teachers.map(_.asThrift),
+        groups.map(_.asThrift)
+      )
     }}
   }
 
