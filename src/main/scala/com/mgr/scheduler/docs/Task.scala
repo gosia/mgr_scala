@@ -32,6 +32,13 @@ final case class Task(
     this.copy(status=scheduler.TaskStatus.Processing.name.toLowerCase)
   }
 
+  def asTaskInfo = scheduler.TaskInfo(
+    this._id,
+    this.config_id,
+    scheduler.TaskStatus.valueOf(this.status).get,
+    scheduler.Algorithm.valueOf(this.algorithm).get
+  )
+
 }
 
 object Task extends BaseObj {

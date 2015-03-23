@@ -91,12 +91,7 @@ object TaskHandler extends Logging {
         val query = couchClient.view("tasks/by_config").startkey(configId).endkey(configId).includeDocs
 
         query.execute map { result: ViewResult => result mapDocs {
-          doc: docs.Task => scheduler.TaskInfo(
-            doc._id,
-            doc.config_id,
-            scheduler.TaskStatus.valueOf(doc.status).get,
-            scheduler.Algorithm.valueOf(doc.algorithm).get
-          )
+          doc: docs.Task => doc.asTaskInfo
         }}
       }}
     }
@@ -105,6 +100,10 @@ object TaskHandler extends Logging {
       Future.collect(queryTasks) map { _.flatten }
     }}
 
+  }
+
+  def getTaskInfo(taskId: String): Future[scheduler.TaskInfo] = {
+    couchClient.get[docs.Task](taskId) map { _.asTaskInfo }
   }
 
 }

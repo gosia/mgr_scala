@@ -122,6 +122,12 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
+  TaskInfo getTaskInfo(
+    1: Id taskId;
+  ) throws (
+    1: SchedulerException se;
+  )
+
   Timetable getTaskResult(
     1: Id taskId;
   ) throws (

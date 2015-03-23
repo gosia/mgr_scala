@@ -35,6 +35,10 @@ class SchedulerServiceImpl(
     handlers.TaskHandler.getTasks(configIdOpt) handle exceptions
   }
 
+  def getTaskInfo(taskId: String): Future[scheduler.TaskInfo] = {
+    handlers.TaskHandler.getTaskInfo(taskId) handle exceptions
+  }
+
   def getTaskResult(taskId: String): Future[scheduler.Timetable] = {
     handlers.TaskHandler.getTaskResult(taskId) handle exceptions
   }
