@@ -49,18 +49,19 @@ object ConfigHandler extends Logging {
   }
 
   def createConfig(
-    id: String,
+    info: scheduler.ConfigBasicInfo,
     terms: Seq[scheduler.Term],
     rooms: Seq[scheduler.Room],
     teachers: Seq[scheduler.Teacher],
     groups: Seq[scheduler.Group]
   ): Future[Unit] = {
+    val id = info.id
     log.info(s"Adding config $id")
     val termDocs = terms map { docs.Term(id, _) }
     val roomDocs = rooms map { docs.Room(id, _) }
     val teacherDocs = teachers map { docs.Teacher(id, _) }
     val groupDocs = groups map { docs.Group(id, _) }
-    val configDoc = docs.Config(id)
+    val configDoc = docs.Config(_id=id, year=info.year, term=info.term)
 
     val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
       case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
@@ -153,6 +154,18 @@ object ConfigHandler extends Logging {
         teachers.map(_.asThrift),
         groups.map(_.asThrift)
       )
+    }}
+  }
+
+  def getConfigs(): Future[Seq[scheduler.ConfigBasicInfo]] = {
+    val configsQuery = couchClient
+      .view("utils/by_type")
+      .startkey("config")
+      .endkey("config")
+      .includeDocs
+
+    configsQuery.execute map { result: ViewResult => result mapDocs {
+      doc: docs.Config => scheduler.ConfigBasicInfo(doc._id, doc.year.toShort, doc.term)
     }}
   }
 

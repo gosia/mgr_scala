@@ -31,14 +31,14 @@ struct Term {
 
 struct Room {
   1: Id id;
-  2: list<Id> terms;
+  2: list<string> terms;
   3: list<string> labels;
   4: i16 capacity;
 }
 
 struct Teacher {
   1: Id id;
-  2: list<Id> terms;
+  2: list<string> terms;
 }
 
 struct GroupExtra {
@@ -64,6 +64,12 @@ struct ConfigInfo {
   3: list<Room> rooms;
   4: list<Teacher> teachers;
   5: list<Group> groups;
+}
+
+struct ConfigBasicInfo {
+  1: Id id;
+  2: i16 year;
+  3: string term; 
 }
 
 enum Algorithm {
@@ -96,7 +102,7 @@ struct Timetable {
 service SchedulerService {
 
   void createConfig(
-    1: Id id;
+    1: ConfigBasicInfo info;
     2: list<Term> terms;
     3: list<Room> rooms;
     4: list<Teacher> teachers;
@@ -104,9 +110,14 @@ service SchedulerService {
   ) throws (
     1: SchedulerException se;
   )
-  
+
   ConfigInfo getConfigInfo(
       1: Id id;
+  ) throws (
+    1: SchedulerException se;
+  )
+  
+  list<ConfigBasicInfo> getConfigs(
   ) throws (
     1: SchedulerException se;
   )

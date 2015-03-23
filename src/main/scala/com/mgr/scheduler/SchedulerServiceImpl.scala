@@ -22,17 +22,21 @@ class SchedulerServiceImpl(
   }
 
   def createConfig(
-    id: String,
+    info: scheduler.ConfigBasicInfo,
     terms: Seq[scheduler.Term],
     rooms: Seq[scheduler.Room],
     teachers: Seq[scheduler.Teacher],
     groups: Seq[scheduler.Group]
   ): Future[Unit] = {
-    handlers.ConfigHandler.createConfig(id, terms, rooms, teachers, groups) handle exceptions
+    handlers.ConfigHandler.createConfig(info, terms, rooms, teachers, groups) handle exceptions
   }
 
   def getConfigInfo(configId: String): Future[scheduler.ConfigInfo] = {
     handlers.ConfigHandler.getConfigInfo(configId) handle exceptions
+  }
+
+  def getConfigs(): Future[Seq[scheduler.ConfigBasicInfo]] = {
+    handlers.ConfigHandler.getConfigs() handle exceptions
   }
 
   def getTasks(configIdOpt: Option[String]): Future[Seq[scheduler.TaskInfo]] = {
