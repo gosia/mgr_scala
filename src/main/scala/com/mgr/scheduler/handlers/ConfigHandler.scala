@@ -57,6 +57,7 @@ object ConfigHandler extends Logging {
   ): Future[Unit] = {
     val id = info.id
     log.info(s"Adding config $id")
+
     val termDocs = terms map { docs.Term(id, _) }
     val roomDocs = rooms map { docs.Room(id, _) }
     val teacherDocs = teachers map { docs.Teacher(id, _) }
@@ -73,7 +74,7 @@ object ConfigHandler extends Logging {
       throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
     }
 
-    val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ Seq(configDoc)
+    val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs ++ Seq(configDoc)
 
     couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
       val errors: Seq[String] = rseq.map(_.errorMsg).flatten
@@ -88,7 +89,7 @@ object ConfigHandler extends Logging {
 
   def getConfigDef(
     configId: String
-  ): Future[(Seq[docs.Group], Seq[docs.Teacher], Seq[docs.Room], Seq[docs.Term])] = {
+  ): Future[(Seq[docs.Group], Seq[docs.Teacher], Seq[docs.Room], Seq[docs.Term], Seq[docs.Label])] = {
     log.info(s"Getting definition for config $configId")
 
     val groupQ = couchClient.view("groups/by_config")
@@ -97,17 +98,21 @@ object ConfigHandler extends Logging {
       .startkey(configId).endkey(configId).includeDocs
     val roomQ = couchClient.view("rooms/by_config").startkey(configId).endkey(configId).includeDocs
     val termQ = couchClient.view("terms/by_config").startkey(configId).endkey(configId).includeDocs
+    val labelQ = couchClient.view("labels/by_config").startkey(configId).endkey(configId).includeDocs
 
     groupQ.execute flatMap { groupR: ViewResult => {
       teacherQ.execute flatMap { teacherR: ViewResult => {
         roomQ.execute flatMap { roomR: ViewResult => {
-          termQ.execute map { termR: ViewResult =>
-            (
-              groupR.docs[docs.Group],
-              teacherR.docs[docs.Teacher],
-              roomR.docs[docs.Room],
-              termR.docs[docs.Term]
-            )
+          termQ.execute flatMap { termR: ViewResult =>
+            labelQ.execute map { labelR: ViewResult =>
+              (
+                groupR.docs[docs.Group],
+                teacherR.docs[docs.Teacher],
+                roomR.docs[docs.Room],
+                termR.docs[docs.Term],
+                labelR.docs[docs.Label]
+              )
+            }
           }
         }}
       }}
@@ -146,7 +151,8 @@ object ConfigHandler extends Logging {
   }
 
   def getConfigInfo(configId: String): Future[scheduler.ConfigInfo] = {
-    getConfigDef(configId) map { case (groups, teachers, rooms, terms) => {
+    log.info(s"Getting fonfig info for config $configId")
+    getConfigDef(configId) map { case (groups, teachers, rooms, terms, labels) =>
       scheduler.ConfigInfo(
         configId,
         terms.map(_.asThrift),
@@ -154,10 +160,11 @@ object ConfigHandler extends Logging {
         teachers.map(_.asThrift),
         groups.map(_.asThrift)
       )
-    }}
+    }
   }
 
   def getConfigs(): Future[Seq[scheduler.ConfigBasicInfo]] = {
+    log.info(s"Getting configs")
     val configsQuery = couchClient
       .view("utils/by_type")
       .startkey("config")
@@ -167,6 +174,53 @@ object ConfigHandler extends Logging {
     configsQuery.execute map { result: ViewResult => result mapDocs {
       doc: docs.Config => scheduler.ConfigBasicInfo(doc._id, doc.year.toShort, doc.term)
     }}
+  }
+
+  def addConfigElement(
+    configId: String,
+    terms: Seq[scheduler.Term],
+    rooms: Seq[scheduler.Room],
+    teachers: Seq[scheduler.Teacher],
+    groups: Seq[scheduler.Group]
+  ): Future[Unit] = {
+    log.info(s"Adding elements for config $configId")
+
+    val termDocs = terms map { docs.Term(configId, _) }
+    val roomDocs = rooms map { docs.Room(configId, _) }
+    val teacherDocs = teachers map { docs.Teacher(configId, _) }
+    val groupDocs = groups map { docs.Group(configId, _) }
+
+    val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
+      case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
+    }) toSeq
+    val labelDocs = labelIds map { docs.Label(configId, _) }
+
+    getConfigDef(configId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
+      val valid = isValidConfig(
+        configId,
+        termDocs ++ exTerms,
+        roomDocs ++ exRooms,
+        teacherDocs ++ exTeachers,
+        groupDocs ++ exGroups,
+        labelDocs ++ exLabels
+      )
+      if (!valid._2) {
+        throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
+      }
+
+      val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
+
+      couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+        val errors: Seq[String] = rseq.map(_.errorMsg).flatten
+        errors.length match {
+          case 0 => ()
+          case n if n > 0 =>
+            log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
+            ()
+        }
+      }}
+    }
+
   }
 
 }

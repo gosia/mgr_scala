@@ -46,7 +46,7 @@ case class Random() extends Base with Logging {
   def start(task: docs.Task): Future[Unit] = {
     log.info(s"Starting task ${task._id}")
     handlers.ConfigHandler.getConfigDef(task.config_id).flatMap({
-      case (groups, teachers, rooms, terms) =>
+      case (groups, teachers, rooms, terms, labels) =>
         log.info(
           s"Got all required data: ${groups.length} groups, ${teachers.length} teachers, " +
           s"${rooms.length} rooms and ${terms.length} terms"

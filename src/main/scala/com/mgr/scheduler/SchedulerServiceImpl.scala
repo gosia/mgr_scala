@@ -39,6 +39,17 @@ class SchedulerServiceImpl(
     handlers.ConfigHandler.getConfigs() handle exceptions
   }
 
+  def addConfigElement(
+    configId: String,
+    mode: scheduler.Mode,
+    terms: Seq[scheduler.Term],
+    rooms: Seq[scheduler.Room],
+    teachers: Seq[scheduler.Teacher],
+    groups: Seq[scheduler.Group]
+  ): Future[Unit] = {
+    handlers.ConfigHandler.addConfigElement(configId, terms, rooms, teachers, groups) handle exceptions
+  }
+
   def getTasks(configIdOpt: Option[String]): Future[Seq[scheduler.TaskInfo]] = {
     handlers.TaskHandler.getTasks(configIdOpt) handle exceptions
   }

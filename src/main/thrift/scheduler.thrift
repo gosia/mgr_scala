@@ -82,6 +82,11 @@ enum TaskStatus {
   FINISHED
 }
 
+enum Mode {
+  ADD,
+  EDIT
+}
+
 struct TaskInfo {
   1: Id id;
   2: Id config_id;
@@ -118,6 +123,17 @@ service SchedulerService {
   )
   
   list<ConfigBasicInfo> getConfigs(
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  void addConfigElement(
+    1: Id id;
+    2: Mode mode;
+    3: list<Term> terms;
+    4: list<Room> rooms;
+    5: list<Teacher> teachers;
+    6: list<Group> groups;
   ) throws (
     1: SchedulerException se;
   )
