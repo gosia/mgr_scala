@@ -68,6 +68,8 @@ final case class ViewResult(
     rows map { _.doc.extract[DocType] } map f
   }
 
+  def ids: Seq[String] = rows.map(_.id)
+
   def docs[DocType: Manifest]: Seq[DocType] = rows map { _.doc.extract[DocType] }
 
 }

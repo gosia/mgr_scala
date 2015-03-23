@@ -70,7 +70,9 @@ enum TaskStatus {
 
 struct TaskInfo {
   1: Id id;
-  2: TaskStatus status;
+  2: Id config_id;
+  3: TaskStatus status;
+  4: Algorithm algorithm;
 }
 
 struct PlaceAndTime {
@@ -95,8 +97,8 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
-  list<TaskInfo> getConfigTasks(
-    1: Id configId;
+  list<TaskInfo> getTasks(
+    1: optional Id configId;
   ) throws (
     1: SchedulerException se;
   )

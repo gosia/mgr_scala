@@ -6,6 +6,7 @@ import com.mgr.scheduler.algorithms
 import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler
 import com.mgr.utils.couch.Client
+import com.mgr.utils.couch.ViewResult
 import com.mgr.utils.logging.Logging
 
 object TaskHandler extends Logging {
@@ -73,6 +74,37 @@ object TaskHandler extends Logging {
       }
 
     }
+  }
+
+  def getTasks(configIdOpt: Option[String]): Future[Seq[scheduler.TaskInfo]] = {
+    log.info(s"Getting tasks for config $configIdOpt")
+
+    val configIdsF: Future[Seq[String]] = configIdOpt match {
+      case Some(configId) => Future.value(Seq(configId))
+      case None =>
+        val configIdsQuery = couchClient.view("utils/by_type").startkey("config").endkey("config")
+        configIdsQuery.execute map { _.ids }
+    }
+
+    val queryTasksF: Future[Seq[Future[Seq[scheduler.TaskInfo]]]] = configIdsF map { configIds =>
+      configIds map { configId => {
+        val query = couchClient.view("tasks/by_config").startkey(configId).endkey(configId).includeDocs
+
+        query.execute map { result: ViewResult => result mapDocs {
+          doc: docs.Task => scheduler.TaskInfo(
+            doc._id,
+            doc.config_id,
+            scheduler.TaskStatus.valueOf(doc.status).get,
+            scheduler.Algorithm.valueOf(doc.algorithm).get
+          )
+        }}
+      }}
+    }
+
+    queryTasksF flatMap { queryTasks => {
+      Future.collect(queryTasks) map { _.flatten }
+    }}
+
   }
 
 }

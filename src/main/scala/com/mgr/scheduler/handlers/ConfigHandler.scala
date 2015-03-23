@@ -86,16 +86,6 @@ object ConfigHandler extends Logging {
     }}
   }
 
-  def getConfigTasks(configId: String): Future[Seq[scheduler.TaskInfo]] = {
-    log.info(s"Getting tasks for config $configId")
-
-    val query = couchClient.view("tasks/by_config").startkey(configId).endkey(configId).includeDocs
-
-    query.execute map { result: ViewResult => result mapDocs {
-      doc: docs.Task => scheduler.TaskInfo(doc._id, TaskStatus.valueOf(doc.status).get)
-    }}
-  }
-
   def getConfigDef(
     configId: String
   ): Future[(Seq[docs.Group], Seq[docs.Teacher], Seq[docs.Room], Seq[docs.Term])] = {
