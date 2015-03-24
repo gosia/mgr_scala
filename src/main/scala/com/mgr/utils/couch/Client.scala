@@ -52,6 +52,13 @@ case class Client(
     }
   }
 
+  def delete[DocType <: Document : Manifest](doc: DocType): Future[CouchResponse] = {
+    log.info(s"COUCH: DELETE ${doc._id}")
+    doDocumentRequest("DELETE", None, doc._id, doc._rev) map {
+      j: String => json.parse(j).extract[CouchResponse]
+    }
+  }
+
   def bulkAdd[T <: Document](docs: Seq[T]): Future[Seq[CouchResponse]] = {
     log.info(s"COUCH: BULK ADD ${docs.size} items")
     val content = json.Serialization.write(Map("docs" -> docs))
@@ -156,10 +163,11 @@ trait RequestUtils extends Logging {
   }
 
   protected def doDocumentRequest(
-    method: String, body: Option[String], id: String
+    method: String, body: Option[String], id: String, rev: Option[String] = None
   ): Future[String] = {
+    val revQuery = rev.map(r => s"?rev=$r").getOrElse("")
     doRequest(
-      (method: String, body: Option[String]) => s"/${this.name}/${URLEncoder.encode(id, "UTF-8")}"
+      (method: String, body: Option[String]) => s"/${this.name}/${URLEncoder.encode(id, "UTF-8")}$revQuery"
     )(method, body)
   }
 

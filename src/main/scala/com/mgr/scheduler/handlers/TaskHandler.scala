@@ -76,6 +76,14 @@ object TaskHandler extends Logging {
     }
   }
 
+  def deleteTask(taskId: String): Future[Unit] = {
+    log.info(s"Deleting task $taskId")
+
+    couchClient.get[docs.Task](taskId) flatMap { doc =>
+      couchClient.delete[docs.Task](doc) map { _ => () }
+    }
+  }
+
   def getTasks(configIdOpt: Option[String]): Future[Seq[scheduler.TaskInfo]] = {
     log.info(s"Getting tasks for config $configIdOpt")
 

@@ -74,4 +74,8 @@ class SchedulerServiceImpl(
     handlers.TaskHandler.startTask(taskId) handle exceptions
   }
 
+  def deleteTask(taskId: String): Future[Unit] = {
+    handlers.TaskHandler.deleteTask(taskId) handle exceptions
+  }
+
 }

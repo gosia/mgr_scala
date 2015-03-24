@@ -158,6 +158,12 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
+  void deleteTask(
+    1: Id taskId;
+  ) throws (
+    1: SchedulerException se;
+  )
+
   TaskStatus getTaskStatus(
     1: Id taskId;
   ) throws (
