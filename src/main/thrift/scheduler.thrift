@@ -73,7 +73,8 @@ struct ConfigBasicInfo {
 }
 
 enum Algorithm {
-  RANDOM
+  RANDOM,
+  MANUAL
 }
 
 enum TaskStatus {
