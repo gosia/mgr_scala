@@ -39,7 +39,7 @@ object GroupRoomTerm {
     val timetableMap = byGroupId(timetable)
 
     ConfigHandler.getConfigDefMap(configId) map {
-      case (groupMap, teacherMap, roomMap, termMap) => {
+      case (groupMap, teacherMap, roomMap, termMap, _) => {
 
         def toTxtTimetable(group: Group, room: Room, term: Term, teachers: Seq[Teacher]): String = {
           val teacherStr = teachers.map(_.toTxt).mkString(", ")
