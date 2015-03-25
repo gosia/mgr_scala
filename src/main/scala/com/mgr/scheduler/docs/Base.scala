@@ -15,3 +15,12 @@ trait BaseObj {
   def getCouchId(configId: String, id: String) = s"$configId:${`type`}:$id"
   def getRealId(doc_id: String) = doc_id.split(":").tail.tail.mkString(":")
 }
+
+
+final case class BaseDoc(
+  _id: String,
+  _rev: Option[String] = None,
+  config_id: String,
+
+  `type`: String
+) extends couch.Document

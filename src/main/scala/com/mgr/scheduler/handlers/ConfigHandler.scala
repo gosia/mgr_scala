@@ -4,6 +4,7 @@ import com.twitter.util.Future
 
 import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler
+import com.mgr.utils.couch
 import com.mgr.utils.couch.Client
 import com.mgr.utils.couch.CouchResponse
 import com.mgr.utils.couch.ViewResult
@@ -221,6 +222,22 @@ object ConfigHandler extends Logging {
       }}
     }
 
+  }
+
+  def removeConfigElement(configId: String, elementId: String, elementType: String): Future[Unit] = {
+    log.info(s"Removing element $elementId of type $elementType for config $configId")
+
+    val clsMap = Map(
+      "group" -> docs.Group,
+      "term" -> docs.Term,
+      "room" -> docs.Room,
+      "teacher" -> docs.Teacher
+    )
+    val cls = clsMap.getOrElse(elementType, throw scheduler.SchedulerException("Wrong element type"))
+
+    couchClient.get[docs.BaseDoc](cls.getCouchId(configId, elementId)) map { doc =>
+      couchClient.delete[docs.BaseDoc](doc) map { _ => () }
+    }
   }
 
 }

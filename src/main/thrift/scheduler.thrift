@@ -138,6 +138,14 @@ service SchedulerService {
   ) throws (
     1: SchedulerException se;
   )
+  
+  void removeConfigElement(
+    1: Id config_id;
+    2: Id element_id;
+    3: string element_type;
+  ) throws (
+    1: SchedulerException se;
+  )
 
   list<TaskInfo> getTasks(
     1: optional Id configId;
