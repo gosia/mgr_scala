@@ -8,11 +8,6 @@ import com.twitter.ostrich.admin.config._
 
 import com.mgr.thrift.scheduler.SchedulerService
 
-trait CouchConfig {
-  val couchHost: String = "localhost"
-  val couchPort: Int = 6666
-}
-
 trait RedisConfig {
   val redisHost = "localhost"
   val redisPort = 6379

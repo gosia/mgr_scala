@@ -3,6 +3,7 @@ package com.mgr.scheduler.handlers
 import com.twitter.util.Future
 
 import com.mgr.scheduler.algorithms
+import com.mgr.scheduler.config.Config
 import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler
 import com.mgr.utils.couch.Client
@@ -11,7 +12,7 @@ import com.mgr.utils.logging.Logging
 
 object TaskHandler extends Logging {
 
-  val couchClient = Client("localhost", 6666, "scheduler")
+  val couchClient = Client(Config.couchHost, Config.couchPort, "scheduler")
 
   def backendExceptions: PartialFunction[Throwable, Nothing] = {
     case e: scheduler.SchedulerException => {
