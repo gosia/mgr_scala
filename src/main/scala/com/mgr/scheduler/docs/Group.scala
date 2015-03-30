@@ -54,7 +54,7 @@ final case class Group(
     }
   }
 
-  def asThrift = scheduler.Group(
+  def asThrift: scheduler.Group = scheduler.Group(
     id=this.getRealId,
     teachers=this.teachers.map(Teacher.getRealId(_)),
     terms=this.terms.map(Term.getRealId(_)),

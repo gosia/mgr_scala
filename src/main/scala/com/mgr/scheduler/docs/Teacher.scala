@@ -23,7 +23,7 @@ final case class Teacher(
 
   def toTxt: String = getRealId
 
-  def asThrift = scheduler.Teacher(
+  def asThrift: scheduler.Teacher = scheduler.Teacher(
     this.getRealId,
     this.terms.map(Term.getRealId(_))
   )

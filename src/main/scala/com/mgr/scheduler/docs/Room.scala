@@ -31,7 +31,7 @@ final case class Room(
 
   def toTxt: String = s"room $getRealId"
 
-  def asThrift = scheduler.Room(
+  def asThrift: scheduler.Room = scheduler.Room(
     id=this.getRealId,
     terms=this.terms.map(Term.getRealId(_)),
     labels=this.labels.map(Label.getRealId(_)),

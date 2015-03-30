@@ -54,7 +54,7 @@ object GroupRoomTerm {
           roomMap.get(roomId).get.toTxt
         }
 
-        def formatValues(data: Map[String, Seq[String]]) = {
+        def formatValues(data: Map[String, Seq[String]]): Map[String, Seq[String]] = {
           data.mapValues(_.map(groupId => {
             val tx: Seq[GroupRoomTerm] = timetableMap.get(Group.getRealId(groupId)).get
             tx.map { t => {

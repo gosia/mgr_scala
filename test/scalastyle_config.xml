@@ -76,7 +76,7 @@
     <check level="warning" class="org.scalastyle.scalariform.StructuralTypeChecker" enabled="true"></check>
     <check level="warning" class="org.scalastyle.file.RegexChecker" enabled="true">
         <parameters>
-            <parameter name="regex"><![CDATA[\n\n\n]]></parameter>
+            <parameter name="regex"><![CDATA[\n\n\n\n]]></parameter>
         </parameters>
     </check>
     <check level="warning" class="org.scalastyle.file.RegexChecker" enabled="true">

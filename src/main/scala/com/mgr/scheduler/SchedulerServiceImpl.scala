@@ -46,7 +46,9 @@ class SchedulerServiceImpl(
     teachers: Seq[scheduler.Teacher],
     groups: Seq[scheduler.Group]
   ): Future[Unit] = {
-    handlers.ConfigHandler.addConfigElement(configId, terms, rooms, teachers, groups) handle exceptions
+    handlers.ConfigHandler.addConfigElement(
+      configId, terms, rooms, teachers, groups
+    ) handle exceptions
   }
 
   def editConfigElement(
@@ -56,10 +58,14 @@ class SchedulerServiceImpl(
     teachers: Seq[scheduler.Teacher],
     groups: Seq[scheduler.Group]
   ): Future[Unit] = {
-    handlers.ConfigHandler.editConfigElement(configId, terms, rooms, teachers, groups) handle exceptions
+    handlers.ConfigHandler.editConfigElement(
+      configId, terms, rooms, teachers, groups
+    ) handle exceptions
   }
 
-  def removeConfigElement(configId: String, elementId: String, elementType: String): Future[Unit] = {
+  def removeConfigElement(
+    configId: String, elementId: String, elementType: String
+  ): Future[Unit] = {
     handlers.ConfigHandler.removeConfigElement(configId, elementId, elementType) handle exceptions
   }
 

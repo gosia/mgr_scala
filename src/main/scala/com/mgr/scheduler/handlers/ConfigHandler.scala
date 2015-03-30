@@ -87,9 +87,9 @@ object ConfigHandler extends Logging {
     }}
   }
 
-  def getConfigDef(
-    configId: String
-  ): Future[(Seq[docs.Group], Seq[docs.Teacher], Seq[docs.Room], Seq[docs.Term], Seq[docs.Label])] = {
+  def getConfigDef(configId: String): Future[(
+    Seq[docs.Group], Seq[docs.Teacher], Seq[docs.Room], Seq[docs.Term], Seq[docs.Label]
+  )] = {
     log.info(s"Getting definition for config $configId")
 
     val groupQ = couchClient.view("groups/by_config")
@@ -98,7 +98,8 @@ object ConfigHandler extends Logging {
       .startkey(configId).endkey(configId).includeDocs
     val roomQ = couchClient.view("rooms/by_config").startkey(configId).endkey(configId).includeDocs
     val termQ = couchClient.view("terms/by_config").startkey(configId).endkey(configId).includeDocs
-    val labelQ = couchClient.view("labels/by_config").startkey(configId).endkey(configId).includeDocs
+    val labelQ = couchClient.view("labels/by_config").startkey(configId).endkey(configId)
+      .includeDocs
 
     groupQ.execute flatMap { groupR: ViewResult => {
       teacherQ.execute flatMap { teacherR: ViewResult => {
@@ -133,7 +134,8 @@ object ConfigHandler extends Logging {
       .startkey(configId).endkey(configId).includeDocs
     val roomQ = couchClient.view("rooms/by_config").startkey(configId).endkey(configId).includeDocs
     val termQ = couchClient.view("terms/by_config").startkey(configId).endkey(configId).includeDocs
-    val labelQ = couchClient.view("labels/by_config").startkey(configId).endkey(configId).includeDocs
+    val labelQ = couchClient.view("labels/by_config").startkey(configId).endkey(configId)
+      .includeDocs
 
     groupQ.execute flatMap { groupR: ViewResult => {
       teacherQ.execute flatMap { teacherR: ViewResult => {
@@ -295,7 +297,9 @@ object ConfigHandler extends Logging {
     }
   }
 
-  def removeConfigElement(configId: String, elementId: String, elementType: String): Future[Unit] = {
+  def removeConfigElement(
+    configId: String, elementId: String, elementType: String
+  ): Future[Unit] = {
     log.info(s"Removing element $elementId of type $elementType for config $configId")
 
     val clsMap = Map(
@@ -304,7 +308,9 @@ object ConfigHandler extends Logging {
       "room" -> docs.Room,
       "teacher" -> docs.Teacher
     )
-    val cls = clsMap.getOrElse(elementType, throw scheduler.SchedulerException("Wrong element type"))
+    val cls = clsMap.getOrElse(
+      elementType, throw scheduler.SchedulerException("Wrong element type")
+    )
 
     couchClient.get[docs.BaseDoc](cls.getCouchId(configId, elementId)) map { doc =>
       couchClient.delete[docs.BaseDoc](doc) map { _ => () }

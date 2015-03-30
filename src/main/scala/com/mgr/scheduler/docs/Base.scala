@@ -6,14 +6,14 @@ import com.mgr.utils.logging.Logging
 trait Base extends couch.Document with Logging {
   val config_id: String
 
-  def getRealId = this._id.split(":").tail.tail.mkString(":")
+  def getRealId: String = this._id.split(":").tail.tail.mkString(":")
 }
 
 trait BaseObj {
   val `type`: String
 
-  def getCouchId(configId: String, id: String) = s"$configId:${`type`}:$id"
-  def getRealId(doc_id: String) = doc_id.split(":").tail.tail.mkString(":")
+  def getCouchId(configId: String, id: String): String = s"$configId:${`type`}:$id"
+  def getRealId(doc_id: String): String = doc_id.split(":").tail.tail.mkString(":")
 }
 
 

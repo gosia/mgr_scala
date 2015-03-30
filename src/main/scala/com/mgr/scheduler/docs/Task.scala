@@ -32,7 +32,7 @@ final case class Task(
     this.copy(status=scheduler.TaskStatus.Processing.name.toLowerCase)
   }
 
-  def asTaskInfo = scheduler.TaskInfo(
+  def asTaskInfo: scheduler.TaskInfo = scheduler.TaskInfo(
     this._id,
     this.config_id,
     scheduler.TaskStatus.valueOf(this.status).get,

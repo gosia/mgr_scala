@@ -96,7 +96,8 @@ object TaskHandler extends Logging {
 
     val queryTasksF: Future[Seq[Future[Seq[scheduler.TaskInfo]]]] = configIdsF map { configIds =>
       configIds map { configId => {
-        val query = couchClient.view("tasks/by_config").startkey(configId).endkey(configId).includeDocs
+        val query = couchClient.view("tasks/by_config").startkey(configId).endkey(configId)
+          .includeDocs
 
         query.execute map { result: ViewResult => result mapDocs {
           doc: docs.Task => doc.asTaskInfo

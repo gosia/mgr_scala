@@ -2,7 +2,7 @@ package com.mgr.scheduler
 
 import org.specs2.mutable._
 
-class RoomTimesItSpec extends SpecificationWithJUnit {
+class RoomTimesItSpecX extends SpecificationWithJUnit {
 
   "RoomTimes" should {
 

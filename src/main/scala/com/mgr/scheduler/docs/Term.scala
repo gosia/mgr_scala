@@ -6,7 +6,7 @@ final case class Time(
   hour: Int,
   minute: Int
 ) {
-  def asThrift = scheduler.Time(
+  def asThrift: scheduler.Time = scheduler.Time(
     this.hour.toShort, this.minute.toShort
   )
 }

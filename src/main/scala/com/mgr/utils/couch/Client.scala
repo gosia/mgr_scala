@@ -67,7 +67,8 @@ case class Client(
     }
   }
 
-  def view(viewName: String) = ViewQueryBuilder(this.host, this.port, this.name, viewName)
+  def view(viewName: String): ViewQueryBuilder =
+    ViewQueryBuilder(this.host, this.port, this.name, viewName)
 }
 
 case class ViewQueryBuilder(
@@ -167,7 +168,8 @@ trait RequestUtils extends Logging {
   ): Future[String] = {
     val revQuery = rev.map(r => s"?rev=$r").getOrElse("")
     doRequest(
-      (method: String, body: Option[String]) => s"/${this.name}/${URLEncoder.encode(id, "UTF-8")}$revQuery"
+      (method: String, body: Option[String]) =>
+        s"/${this.name}/${URLEncoder.encode(id, "UTF-8")}$revQuery"
     )(method, body)
   }
 
