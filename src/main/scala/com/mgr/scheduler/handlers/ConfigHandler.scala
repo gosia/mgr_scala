@@ -318,4 +318,106 @@ object ConfigHandler extends Logging {
     }
   }
 
+  def copyConfigElements(
+    toConfigId: String, fromConfigId: String, elementsType: String)
+  : Future[Unit] = {
+    log.info(s"Copying $elementsType from $fromConfigId to $toConfigId")
+
+    if (!Set("room", "teacher", "term").contains(elementsType)) {
+      throw scheduler.SchedulerException("Wrong elements type")
+    }
+
+    getConfigDef(toConfigId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
+      val teacherQ = couchClient.view("teachers/by_config")
+        .startkey(fromConfigId).endkey(fromConfigId).includeDocs
+      val roomQ = couchClient.view("rooms/by_config")
+        .startkey(fromConfigId).endkey(fromConfigId).includeDocs
+      val termQ = couchClient.view("terms/by_config")
+        .startkey(fromConfigId).endkey(fromConfigId).includeDocs
+
+      termQ.execute flatMap { termR: ViewResult =>
+        val fromTerms = termR.docs[docs.Term]
+
+        val newTeachersF = elementsType match {
+          case "teacher" =>
+            teacherQ.execute map { teacherR: ViewResult => teacherR.docs[docs.Teacher] }
+          case _ => Future.value(Seq())
+        }
+        val newRoomsF = elementsType match {
+          case "room" => roomQ.execute map { roomR: ViewResult => roomR.docs[docs.Room] }
+          case _ => Future.value(Seq())
+        }
+
+        newTeachersF flatMap { fromTeachers: Seq[docs.Teacher] =>
+          newRoomsF flatMap { fromRooms =>
+
+            val newRooms = fromRooms map { _.editConfig(toConfigId) }
+            val newTeachers = fromTeachers map { _.editConfig(toConfigId) }
+
+            val newTermIds: Seq[String] = elementsType match {
+              case "term" => fromTerms map { _.getRealId }
+              case "teacher" => fromTeachers map { t: docs.Teacher => t.terms map {
+                  x: String => docs.Term.getRealId(x)
+                }} flatten
+              case "room" => fromRooms map { r: docs.Room => r.terms map {
+                  x: String => docs.Term.getRealId(x)
+                }} flatten
+            }
+            val newTermIdsSet = newTermIds.toSeq
+            val newTerms = fromTerms filter {
+              x: docs.Term => newTermIdsSet.contains(x.getRealId)
+            } map { x => x.editConfig(toConfigId) } filter { t =>
+              val equalExTerms = exTerms.filter(_._id == t._id)
+              equalExTerms match {
+                case Seq(x) =>
+                  if (x.isTheSame(t)) {
+                    false
+                  } else {
+                    throw scheduler.SchedulerException(s"Term already exists: ${x.getRealId}")
+                  }
+                case Seq() => true
+              }
+            }
+
+            val newLabels = newRooms.map(r => r.labels.map(docs.Label.getRealId)).flatten
+              .filter(l => !exLabels.exists(_.getRealId == l))
+              .map(l => docs.Label(toConfigId, l))
+
+            val valid = isValidConfig(
+              toConfigId, exTerms ++ newTerms, exRooms ++ newRooms, exTeachers ++ newTeachers,
+              exGroups, exLabels ++ newLabels
+            )
+            if (!valid._2) {
+              throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
+            }
+
+            val elementExistsAlready =
+              newTeachers.exists(t => exTeachers.exists(_._id == t._id)) ||
+              newRooms.exists(r => exRooms.exists(_._id == r._id))
+
+            if (elementExistsAlready) {
+              throw scheduler.SchedulerException(
+                s"Teacher or room already exists in config $toConfigId"
+              )
+            }
+
+            val newDocs = newTeachers ++ newLabels ++ newRooms ++ newTerms
+            couchClient.bulkAdd(newDocs).map { rseq: Seq[CouchResponse] => {
+              val errors: Seq[String] = rseq.map(_.errorMsg).flatten
+              errors.length match {
+                case 0 => ()
+                case n if n > 0 =>
+                  log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
+                  ()
+              }
+            }}
+
+          }
+        }
+
+      }
+
+    }
+  }
+
 }

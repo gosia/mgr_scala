@@ -151,45 +151,53 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
+  void copyConfigElements(
+    1: Id to_config_id;
+    2: Id from_config_id;
+    3: string elements_type;
+  ) throws (
+    1: SchedulerException se;
+  )
+
   list<TaskInfo> getTasks(
-    1: optional Id configId;
+    1: optional Id config_id;
   ) throws (
     1: SchedulerException se;
   )
 
   Id createTask(
-    1: Id configId;
+    1: Id config_id;
     2: Algorithm algorithm;
   ) throws (
     1: SchedulerException se;
   )
 
   void startTask(
-    1: Id taskId;
+    1: Id task_id;
   ) throws (
     1: SchedulerException se;
   )
 
   void deleteTask(
-    1: Id taskId;
+    1: Id task_id;
   ) throws (
     1: SchedulerException se;
   )
 
   TaskStatus getTaskStatus(
-    1: Id taskId;
+    1: Id task_id;
   ) throws (
     1: SchedulerException se;
   )
 
   TaskInfo getTaskInfo(
-    1: Id taskId;
+    1: Id task_id;
   ) throws (
     1: SchedulerException se;
   )
 
   Timetable getTaskResult(
-    1: Id taskId;
+    1: Id task_id;
   ) throws (
     1: SchedulerException se;
   )

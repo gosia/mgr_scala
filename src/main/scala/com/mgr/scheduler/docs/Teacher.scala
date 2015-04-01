@@ -28,6 +28,10 @@ final case class Teacher(
     this.terms.map(Term.getRealId(_))
   )
 
+  def editConfig(newConfigId: String): Teacher = Teacher.apply(
+    newConfigId, this.asThrift
+  )
+
 }
 
 object Teacher extends BaseObj {

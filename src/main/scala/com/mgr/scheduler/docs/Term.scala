@@ -9,6 +9,8 @@ final case class Time(
   def asThrift: scheduler.Time = scheduler.Time(
     this.hour.toShort, this.minute.toShort
   )
+
+  def isTheSame(other: Time): Boolean = this.hour == other.hour && this.minute == other.minute
 }
 
 final case class Term(
@@ -92,6 +94,15 @@ final case class Term(
     this.end.asThrift,
     scheduler.Day.valueOf(this.day).get
   )
+
+  def editConfig(newConfigId: String): Term = Term.apply(
+    newConfigId, this.asThrift
+  )
+
+  def isTheSame(other: Term): Boolean = {
+    this.start.isTheSame(other.start) && this.end.isTheSame(other.end) &&
+      this.day == other.day && this.config_id == other.config_id && this._id == other._id
+  }
 
 }
 

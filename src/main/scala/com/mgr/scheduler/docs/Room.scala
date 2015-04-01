@@ -37,6 +37,10 @@ final case class Room(
     labels=this.labels.map(Label.getRealId(_)),
     capacity=this.capacity.toShort
   )
+
+  def editConfig(newConfigId: String): Room = Room.apply(
+    newConfigId, this.asThrift
+  )
 }
 
 object Room extends BaseObj {

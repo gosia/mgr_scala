@@ -69,6 +69,14 @@ class SchedulerServiceImpl(
     handlers.ConfigHandler.removeConfigElement(configId, elementId, elementType) handle exceptions
   }
 
+  def copyConfigElements(
+    toConfigId: String, fromConfigId: String, elementsType: String)
+  : Future[Unit] = {
+    handlers.ConfigHandler.copyConfigElements(
+      toConfigId, fromConfigId, elementsType
+    ) handle exceptions
+  }
+
   def getTasks(configIdOpt: Option[String]): Future[Seq[scheduler.TaskInfo]] = {
     handlers.TaskHandler.getTasks(configIdOpt) handle exceptions
   }
