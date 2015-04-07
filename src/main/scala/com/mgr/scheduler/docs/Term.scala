@@ -13,6 +13,10 @@ final case class Time(
   def isTheSame(other: Time): Boolean = this.hour == other.hour && this.minute == other.minute
 }
 
+object Time {
+  def apply(time: scheduler.Time): Time = Time(time.hour, time.minute)
+}
+
 final case class Term(
   _id: String,
   _rev: Option[String] = None,
@@ -95,6 +99,7 @@ final case class Term(
     scheduler.Day.valueOf(this.day).get
   )
 
+
   def editConfig(newConfigId: String): Term = Term.apply(
     newConfigId, this.asThrift
   )
@@ -102,6 +107,14 @@ final case class Term(
   def isTheSame(other: Term): Boolean = {
     this.start.isTheSame(other.start) && this.end.isTheSame(other.end) &&
       this.day == other.day && this.config_id == other.config_id && this._id == other._id
+  }
+
+  def contains(point: scheduler.Point): Boolean = {
+    val time = Time.apply(point.time)
+
+    this.day == point.day.name.toLowerCase &&
+      TimeOrdering.compare(this.start, time) == -1 &&
+      TimeOrdering.compare(time, this.end) == -1
   }
 
 }
@@ -112,13 +125,30 @@ object Term extends BaseObj {
   def apply(configId: String, term: scheduler.Term): Term = Term(
     _id = Term.getCouchId(configId, term.id),
     config_id = configId,
-    start = Time(
-      term.startTime.hour,
-      term.startTime.minute
-    ),
-    end = Time(term.endTime.hour, term.endTime.minute),
+    start = Time.apply(term.startTime),
+    end = Time.apply(term.endTime),
     day = term.day.name.toLowerCase
   )
+
+  def findByPoint(terms: Seq[Term], point: scheduler.Point): Option[Term] = {
+    terms.foldLeft[Option[Term]](None) { case (r, t) => r match {
+      case None => if (t.contains(point)) { Some(t) } else None
+      case _ => r
+    }}
+  }
+
+  def findManyByPoint(terms: Seq[Term], point: scheduler.Point, howMany: Int): Option[Seq[Term]] = {
+    val first: Option[Seq[Term]] = Term.findByPoint(terms, point) map { t => Seq(t) }
+    (2 to howMany).foldLeft[Option[Seq[Term]]](first) { case (r, _) => r match {
+      case None => None
+      case Some(tx) =>
+        val newLast: Option[Term] = tx.last.findNext(terms)
+        newLast match {
+          case None => None
+          case Some(t) => Some(tx ++ Seq(t))
+        }
+    }}
+  }
 
 }
 

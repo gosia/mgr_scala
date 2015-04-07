@@ -105,4 +105,16 @@ class SchedulerServiceImpl(
     handlers.TaskHandler.deleteTask(taskId) handle exceptions
   }
 
+  def addTaskEvent(
+    taskId: String, groupId: String, point: scheduler.Point
+  ): Future[scheduler.Timetable] = {
+    handlers.TaskHandler.addEvent(taskId, groupId, point) handle exceptions
+  }
+
+  def removeTaskEvent(
+    taskId: String, groupId: String
+  ): Future[scheduler.Timetable] = {
+    handlers.TaskHandler.removeEvent(taskId, groupId) handle exceptions
+  }
+
 }

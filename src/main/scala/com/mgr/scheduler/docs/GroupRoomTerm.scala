@@ -4,6 +4,7 @@ import com.twitter.util.Future
 
 import com.mgr.scheduler.handlers.ConfigHandler
 import com.mgr.thrift.scheduler
+import com.mgr.utils.logging.Logging
 
 final case class GroupRoomTerm(
   group: String,
@@ -11,7 +12,7 @@ final case class GroupRoomTerm(
   term: String
 )
 
-object GroupRoomTerm {
+object GroupRoomTerm extends Logging {
 
   def toThriftTimetable(
     timetable: Seq[GroupRoomTerm]
@@ -56,7 +57,7 @@ object GroupRoomTerm {
 
         def formatValues(data: Map[String, Seq[String]]): Map[String, Seq[String]] = {
           data.mapValues(_.map(groupId => {
-            val tx: Seq[GroupRoomTerm] = timetableMap.get(Group.getRealId(groupId)).get
+            val tx: Seq[GroupRoomTerm] = timetableMap.getOrElse(Group.getRealId(groupId), Seq())
             tx.map { t => {
               val room = roomMap.get(t.room).get
               val term = termMap.get(t.term).get
@@ -86,5 +87,10 @@ object GroupRoomTerm {
         s"=== TEACHERS ===\n\n$byTeachers\n\n=== ROOMS ===\n\n$byRooms"
     }}
   }
+
+  def toThrift(timetable: Seq[GroupRoomTerm]): scheduler.Timetable = scheduler.Timetable(
+    GroupRoomTerm.toThriftTimetable(timetable),
+    ""
+  )
 
 }

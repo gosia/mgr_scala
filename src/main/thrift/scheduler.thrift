@@ -18,8 +18,8 @@ enum Day {
 }
 
 struct Time {
-  2: i16 hour;
-  3: i16 minute;
+  1: i16 hour;
+  2: i16 minute;
 }
 
 struct Term {
@@ -27,6 +27,11 @@ struct Term {
   2: Time start_time;
   3: Time end_time;
   4: Day day;
+}
+
+struct Point {
+  1: Time time;
+  2: Day day;
 }
 
 struct Room {
@@ -93,6 +98,12 @@ struct TaskInfo {
 struct PlaceAndTime {
   1: Id term;
   2: Id room;
+}
+
+struct GroupRoomTerm {
+  1: Id group_id;
+  2: Id room_id;
+  3: Id term_id;
 }
 
 struct Timetable {
@@ -198,6 +209,21 @@ service SchedulerService {
 
   Timetable getTaskResult(
     1: Id task_id;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  Timetable addTaskEvent(
+    1: Id task_id;
+    2: Id group_id;
+    3: Point point;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  Timetable removeTaskEvent(
+    1: Id task_id;
+    2: Id group_id;
   ) throws (
     1: SchedulerException se;
   )

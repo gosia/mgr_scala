@@ -39,6 +39,20 @@ final case class Task(
     scheduler.Algorithm.valueOf(this.algorithm).get
   )
 
+  def removeGroupTimetable(groupId: String): (Task, Seq[GroupRoomTerm]) = {
+    def p(x: GroupRoomTerm) = x.group == groupId
+
+    val newTimetable: Option[Seq[GroupRoomTerm]] = this.timetable map { timetable =>
+      timetable.filterNot(p)
+    }
+    val removed = this.timetable.getOrElse(Seq()).filter(p)
+
+    (this.copy(timetable=newTimetable), removed)
+  }
+  def extendTimetable(xs: Seq[GroupRoomTerm]): Task = this.copy(
+    timetable=Some(this.timetable.getOrElse(Seq()) ++ xs)
+  )
+
 }
 
 object Task extends BaseObj {

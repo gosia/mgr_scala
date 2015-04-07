@@ -158,7 +158,7 @@ object ConfigHandler extends Logging {
   }
 
   def getConfigInfo(configId: String): Future[scheduler.ConfigInfo] = {
-    log.info(s"Getting fonfig info for config $configId")
+    log.info(s"Getting config info for config $configId")
     getConfigDef(configId) map { case (groups, teachers, rooms, terms, labels) =>
       scheduler.ConfigInfo(
         configId,
