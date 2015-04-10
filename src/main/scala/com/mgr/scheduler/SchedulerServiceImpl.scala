@@ -35,6 +35,10 @@ class SchedulerServiceImpl(
     handlers.ConfigHandler.getConfigInfo(configId) handle exceptions
   }
 
+  def deleteConfig(configId: String): Future[Unit] = {
+    handlers.ConfigHandler.deleteConfig(configId) handle exceptions
+  }
+
   def getConfigs(): Future[Seq[scheduler.ConfigBasicInfo]] = {
     handlers.ConfigHandler.getConfigs() handle exceptions
   }

@@ -128,6 +128,12 @@ service SchedulerService {
   ) throws (
     1: SchedulerException se;
   )
+
+  void deleteConfig(
+    1: Id config_id;
+  ) throws (
+    1: SchedulerException se;
+  )
   
   list<ConfigBasicInfo> getConfigs(
   ) throws (
