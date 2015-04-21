@@ -40,7 +40,7 @@ final case class Task(
   )
 
   def removeGroupTimetable(groupId: String): (Task, Seq[GroupRoomTerm]) = {
-    def p(x: GroupRoomTerm) = x.group == groupId
+    def p(x: GroupRoomTerm): Boolean = x.group == groupId
 
     val newTimetable: Option[Seq[GroupRoomTerm]] = this.timetable map { timetable =>
       timetable.filterNot(p)
