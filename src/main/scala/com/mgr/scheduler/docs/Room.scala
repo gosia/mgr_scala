@@ -33,8 +33,8 @@ final case class Room(
 
   def asThrift: scheduler.Room = scheduler.Room(
     id=this.getRealId,
-    terms=this.terms.map(Term.getRealId(_)),
-    labels=this.labels.map(Label.getRealId(_)),
+    terms=this.terms.map(Term.getRealId),
+    labels=this.labels.map(Label.getRealId),
     capacity=this.capacity.toShort
   )
 

@@ -121,4 +121,8 @@ class SchedulerServiceImpl(
     handlers.TaskHandler.removeEvent(taskId, groupId) handle exceptions
   }
 
+  def getGroupBusyTerms(taskId: String, groupId: String): Future[Seq[String]] = {
+    handlers.TaskHandler.getGroupBusyTerms(taskId, groupId) handle exceptions
+  }
+
 }

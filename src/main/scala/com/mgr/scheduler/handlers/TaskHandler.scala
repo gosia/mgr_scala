@@ -186,4 +186,66 @@ object TaskHandler extends Logging {
     }
   }
 
+  def getGroupBusyTerms(taskId: String, groupId: String): Future[Seq[String]] = {
+    log.info(s"Getting busy terms for group $groupId and task $taskId")
+
+    couchClient.get[docs.Task](taskId) flatMap { task =>
+      val configId = task.config_id
+      val couchGroupId = docs.Group.getCouchId(configId, groupId)
+
+      ConfigHandler.getConfigDefMap(configId) map {
+        case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
+          val group = exGroups(couchGroupId)
+          val allTerms = exTerms.keys.toSet
+
+          val conflictingTimetable = task.timetable.map(_.filter(x => {
+            val g = exGroups(x.group)
+            g.teachers.toSet.intersect(group.teachers.toSet).nonEmpty
+          })).getOrElse(Seq())
+
+          val conflictingTermsForTeacher = group.teachers.map(t => {
+            val teacher = exTeachers(t)
+            allTerms -- teacher.terms.toSet
+          }).flatten
+
+          val validRoomsForGroup = validators.Room.getIds(group, exRooms.values.toSeq)
+          val roomsCount = validRoomsForGroup.size
+          val conflictingTermsForRooms: Seq[String] = task.timetable.map({ timetable =>
+
+            // rooms busy by timetable
+            val busyRoomsByTimetable = timetable.filter(x =>
+              validRoomsForGroup.contains(x.room)
+            ).foldLeft[Map[String, Set[String]]](Map())({ case (m, x) =>
+              m.get(x.term) match {
+                case None => m + (x.term -> Set(x.room))
+                case Some(s) => m + (x.term -> (s + x.room))
+              }
+            })
+
+            // add rooms busy by no valid terms
+            val busyRooms: Map[String, Set[String]] = validRoomsForGroup.map(x => {
+              val wrongTerms = allTerms -- exRooms(x).terms
+              wrongTerms.map((_, x))
+            }).flatten.foldLeft(busyRoomsByTimetable)({ case (m, x) => {
+              m.get(x._1) match {
+                case None => m + (x._1 -> Set(x._2))
+                case Some(s) => m + (x._1 -> (s + x._2))
+              }
+            }})
+
+            busyRooms.mapValues(_.size).filter({ case (k, v) => v == roomsCount}).keys.toSeq
+          }).getOrElse(Seq())
+
+          val conflictingTermsForGroup = allTerms -- group.terms.toSet
+
+          val conflictingTerms = (
+            conflictingTermsForTeacher ++ conflictingTermsForRooms ++ conflictingTermsForGroup
+          ).map(docs.Term.getRealId)
+
+          (conflictingTimetable.map(x => docs.Term.getRealId(x.term)) ++ conflictingTerms)
+            .toSet.toSeq
+      }
+    }
+  }
+
 }

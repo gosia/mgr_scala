@@ -56,11 +56,11 @@ final case class Group(
 
   def asThrift: scheduler.Group = scheduler.Group(
     id=this.getRealId,
-    teachers=this.teachers.map(Teacher.getRealId(_)),
-    terms=this.terms.map(Term.getRealId(_)),
-    labels=this.labels.map(Label.getRealId(_)),
-    diffTermGroups=this.diff_term_groups.map(Group.getRealId(_)),
-    sameTermGroups=this.same_term_groups.map(Group.getRealId(_)),
+    teachers=this.teachers.map(Teacher.getRealId),
+    terms=this.terms.map(Term.getRealId),
+    labels=this.labels.map(Label.getRealId),
+    diffTermGroups=this.diff_term_groups.map(Group.getRealId),
+    sameTermGroups=this.same_term_groups.map(Group.getRealId),
     termsNum=this.terms_num.toShort,
     studentsNum=this.students_num.toShort,
     extra=this.extra.map(extra => scheduler.GroupExtra(

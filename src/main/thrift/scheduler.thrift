@@ -234,4 +234,11 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
+  list<Id> getGroupBusyTerms(
+    1: Id task_id;
+    2: Id group_id;
+  ) throws (
+    1: SchedulerException se;
+  )
+
 }
