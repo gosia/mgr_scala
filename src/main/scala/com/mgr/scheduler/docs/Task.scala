@@ -1,6 +1,7 @@
 package com.mgr.scheduler.docs
 
 import com.mgr.thrift.scheduler
+import com.mgr.utils.couch
 
 final case class Task(
   _id: String,
@@ -13,7 +14,7 @@ final case class Task(
   algorithm: String,
 
   `type`: String = Task.`type`
-) extends Base {
+) extends couch.Document {
 
   def finish(timetable: Map[String, Seq[(String, String)]]): Task = {
     this.copy(
@@ -55,11 +56,11 @@ final case class Task(
 
 }
 
-object Task extends BaseObj {
+object Task {
   val `type`: String = "task"
 
   def apply(configId: String, algorithm: scheduler.Algorithm): Task = Task(
-    _id = Task.getCouchId(configId, java.util.UUID.randomUUID.toString),
+    _id = java.util.UUID.randomUUID.toString,
     config_id = configId,
     status = scheduler.TaskStatus.NotStarted.name.toLowerCase,
     timetable = None,
