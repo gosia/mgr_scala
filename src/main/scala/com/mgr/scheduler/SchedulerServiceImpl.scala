@@ -81,6 +81,10 @@ class SchedulerServiceImpl(
     ) handle exceptions
   }
 
+  def importData(configId: String, data: String): Future[Unit] = {
+    handlers.ConfigHandler.importData(configId, data) handle exceptions
+  }
+
   def getTasks(configIdOpt: Option[String]): Future[Seq[scheduler.TaskInfo]] = {
     handlers.TaskHandler.getTasks(configIdOpt) handle exceptions
   }

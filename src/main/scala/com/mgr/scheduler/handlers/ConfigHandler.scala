@@ -460,4 +460,8 @@ object ConfigHandler extends Logging {
     }
   }
 
+  def importData(configId: String, data: String): Future[Unit] = {
+    ???
+  }
+
 }

@@ -176,6 +176,13 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
+  void importData(
+    1: Id config_id;
+    2: string data;
+  ) throws (
+    1: SchedulerException se;
+  )
+
   list<TaskInfo> getTasks(
     1: optional Id config_id;
   ) throws (
