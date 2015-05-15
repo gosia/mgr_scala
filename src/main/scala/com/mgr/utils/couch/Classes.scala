@@ -37,6 +37,18 @@ case class CouchResponse(
   }
 }
 
+object CouchResponse extends Logging {
+  def logErrors(responses: Seq[CouchResponse]): Unit = {
+    val errors: Seq[String] = responses.map(_.errorMsg).flatten
+    errors.length match {
+      case 0 => ()
+      case n if n > 0 =>
+        log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
+        ()
+    }
+  }
+}
+
 final case class CouchException(m: String) extends Exception
 
 case class CouchResult[T <: Document](response: CouchResponse, doc: T)

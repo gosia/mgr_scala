@@ -26,23 +26,27 @@ final case class Group(
 ) extends Base {
 
   def isValid(
-    validTerms: Set[String], validLabels: Set[String], validGroups: Set[String]
+    validTerms: Set[String], validLabels: Set[String], validGroups: Set[String],
+    validTeachers: Set[String]
   ): (Option[String], Boolean) =
     if (
       (terms.toSet -- validTerms).isEmpty &&
       (labels.toSet -- validLabels).isEmpty &&
       (diff_term_groups.toSet -- validGroups).isEmpty &&
-      (same_term_groups.toSet -- validGroups).isEmpty
+      (same_term_groups.toSet -- validGroups).isEmpty &&
+      (teachers.toSet -- validTeachers).isEmpty
     ) {
       (None, true)
     } else {
       val unknownTerms = (terms.toSet -- validTerms).mkString(", ")
       val unknownLabels = (labels.toSet -- validLabels).mkString(", ")
       val unknownGroups = (diff_term_groups.toSet ++ same_term_groups.toSet) -- validGroups
+      val unknownTeachers = (teachers.toSet -- validTeachers) -- validGroups
       (
         Some(
           s"Group $getRealId is not valid (unknown labels: <$unknownLabels>, " +
-          s"unknown terms: <$unknownTerms>, unknown groups: <$unknownGroups>)"
+          s"unknown terms: <$unknownTerms>, unknown groups: <$unknownGroups>), " +
+          s"unknown teachers: <$unknownTeachers>"
         ), false
       )
     }

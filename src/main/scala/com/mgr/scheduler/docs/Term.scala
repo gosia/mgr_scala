@@ -130,6 +130,14 @@ object Term extends BaseObj {
     day = term.day.name.toLowerCase
   )
 
+  def forIi(configId: String, day: Int, hour: Int): Term = Term(
+    _id = Term.getCouchId(configId, (day * 100 + hour).toString),
+    config_id = configId,
+    start = Time(hour, 15),
+    end = Time(hour + 1, 0),
+    day = scheduler.Day(day).name.toLowerCase
+  )
+
   def findByPoint(terms: Seq[Term], point: scheduler.Point): Option[Term] = {
     terms.foldLeft[Option[Term]](None) { case (r, t) => r match {
       case None => if (t.contains(point)) { Some(t) } else None

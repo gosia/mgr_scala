@@ -4,6 +4,7 @@ import com.twitter.util.Future
 
 import com.mgr.scheduler.config.Config
 import com.mgr.scheduler.docs
+import com.mgr.scheduler.serializers
 import com.mgr.thrift.scheduler
 import com.mgr.utils.couch.Client
 import com.mgr.utils.couch.CouchResponse
@@ -25,12 +26,13 @@ object ConfigHandler extends Logging {
     val termIds = terms map { _._id } toSet
     val groupIds = groups map { _._id } toSet
     val labelIds = labels map { _._id } toSet
+    val teacherIds = teachers map { _._id } toSet
 
     val validated: Seq[(Option[String], Boolean)] =
       terms.map(_.isValid) ++
       rooms.map(_.isValid(termIds, labelIds)) ++
       teachers.map(_.isValid(termIds)) ++
-      groups.map(_.isValid(termIds, labelIds, groupIds))
+      groups.map(_.isValid(termIds, labelIds, groupIds, teacherIds))
 
     val validationResult = validated.foldLeft[(Option[String], Boolean)]((None, true))({
       case (x, r) => if (x._2) {
@@ -443,13 +445,8 @@ object ConfigHandler extends Logging {
 
             val newDocs = newTeachers ++ newLabels ++ newRooms ++ newTerms
             couchClient.bulkAdd(newDocs).map { rseq: Seq[CouchResponse] => {
-              val errors: Seq[String] = rseq.map(_.errorMsg).flatten
-              errors.length match {
-                case 0 => ()
-                case n if n > 0 =>
-                  log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
-                  ()
-              }
+              CouchResponse.logErrors(rseq)
+              ()
             }}
 
           }
@@ -461,7 +458,25 @@ object ConfigHandler extends Logging {
   }
 
   def importData(configId: String, data: String): Future[Unit] = {
-    ???
+    val doc = docs.ImportData(configId, data)
+
+    couchClient.add[docs.ImportData](doc) flatMap { _ =>
+      val config = serializers.Ii(configId, data).toConfigDef
+
+      val valid = isValidConfig(
+        configId, config.terms, config.rooms, config.teachers,
+        config.groups, config.labels
+      )
+      if (!valid._2) {
+        throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
+      }
+
+      couchClient.bulkAdd(config.allDocs) map { rseq: Seq[CouchResponse] => {
+        CouchResponse.logErrors(rseq)
+        ()
+      }}
+
+    }
   }
 
 }

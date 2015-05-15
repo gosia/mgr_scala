@@ -25,7 +25,7 @@ final case class Teacher(
 
   def asThrift: scheduler.Teacher = scheduler.Teacher(
     this.getRealId,
-    this.terms.map(Term.getRealId(_))
+    this.terms.map(Term.getRealId)
   )
 
   def editConfig(newConfigId: String): Teacher = Teacher.apply(
