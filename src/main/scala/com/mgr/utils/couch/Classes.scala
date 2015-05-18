@@ -6,8 +6,6 @@ import net.liftweb.json
 
 import com.mgr.utils.logging.Logging
 
-final case class BulkDoc[T <: Document](docs: Seq[T])
-
 case class CouchConfig(
   host: String,
   port: Int,
@@ -53,7 +51,7 @@ final case class CouchException(m: String) extends Exception
 
 case class CouchResult[T <: Document](response: CouchResponse, doc: T)
 
-case class DocInfo(_id: String, _rev: String)
+case class DocInfo(_id: String, _rev: Option[String], `type`: String = "") extends Document
 
 trait Document {
 
@@ -74,7 +72,7 @@ final case class ViewResult(
   total_rows: Int,
   offset: Int,
   rows: Seq[ViewRow]
-) {
+) extends Logging {
 
   def mapDocs[DocType: Manifest, T](f: DocType => T): Seq[T] = {
     rows map { _.doc.extract[DocType] } map f
@@ -83,5 +81,9 @@ final case class ViewResult(
   def ids: Seq[String] = rows.map(_.id)
 
   def docs[DocType: Manifest]: Seq[DocType] = rows map { _.doc.extract[DocType] }
-
+  def docIds: Seq[String] = rows map { _.id }
+  def docInfos: Seq[DocInfo] = rows map { row =>
+    val rev = row.value.asInstanceOf[json.JString].values
+    DocInfo(row.id, Some(rev))
+  }
 }

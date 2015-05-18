@@ -175,40 +175,16 @@ object ConfigHandler extends Logging {
   def deleteConfig(configId: String): Future[Unit] = {
     log.info(s"Deleting config $configId")
 
-    getConfigDef(configId) map { case (groups, teachers, rooms, terms, labels) =>
-      val deleteGroupsF: Future[Seq[Unit]] = Future.collect {
-        groups map { doc => couchClient.delete[docs.Group](doc) map { _ => () } }
-      }
-      val deleteTeachersF: Future[Seq[Unit]] = Future.collect {
-        teachers map { doc => couchClient.delete[docs.Teacher](doc) map { _ => () } }
-      }
-      val deleteRoomsF: Future[Seq[Unit]] = Future.collect {
-        rooms map { doc => couchClient.delete[docs.Room](doc) map { _ => () } }
-      }
-      val deleteTermsF: Future[Seq[Unit]] = Future.collect {
-        terms map { doc => couchClient.delete[docs.Term](doc) map { _ => () } }
-      }
-      val deleteLabelsF: Future[Seq[Unit]] = Future.collect {
-        labels map { doc => couchClient.delete[docs.Label](doc) map { _ => () } }
-      }
-      val deleteTasksF: Future[Seq[Unit]] = {
-        couchClient
-          .view("tasks/by_config")
-          .startkey(configId)
-          .endkey(configId)
-          .includeDocs
-          .execute map { result: ViewResult => result mapDocs {
-            doc: docs.Task => couchClient.delete[docs.Task](doc) map { _ => () } }
-          }
-      }
-      val deleteConfigF: Future[Unit] = couchClient.get[docs.Config](configId) flatMap { config =>
-        couchClient.delete[docs.Config](config) map { _ => ()}
-      }
+    val docsQ = couchClient
+      .view("utils/by_config")
+      .startkey(configId)
+      .endkey(configId)
 
-      Future.join(
-        deleteGroupsF, deleteTeachersF, deleteRoomsF, deleteTermsF, deleteLabelsF, deleteTasksF,
-        deleteConfigF
-      ) map { _ => () }
+    docsQ.execute flatMap { result: ViewResult =>
+      couchClient.bulkDelete(result.docInfos) map { responses: Seq[CouchResponse] =>
+        CouchResponse.logErrors(responses)
+        ()
+      }
     }
   }
 

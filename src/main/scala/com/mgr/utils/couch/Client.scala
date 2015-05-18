@@ -8,6 +8,7 @@ import com.twitter.finagle.http.Response
 import com.twitter.util.Future
 import java.net.URLEncoder
 import net.liftweb.json
+import net.liftweb.json.JsonDSL._
 import org.apache.http.ConnectionClosedException
 import org.jboss.netty.handler.codec.http._
 import org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1
@@ -67,6 +68,19 @@ case class Client(
     }
   }
 
+  def bulkDelete[T <: Document](docs: Seq[T]): Future[Seq[CouchResponse]] = {
+    log.info(s"COUCH: BULK DELETE ${docs.size} items")
+    val jsonDocs = docs map { doc =>
+      ("_id" -> doc._id) ~ ("_rev" -> doc._rev) ~ ("_deleted" -> true)
+    }
+    val jsonContent = Map("docs" -> jsonDocs)
+    val content: String = json.Serialization.write(jsonContent)
+
+    doBulkRequest("POST", Some(content)) map {
+      j: String => json.parse(j).extract[List[CouchResponse]].toSeq
+    }
+  }
+
   def view(viewName: String): ViewQueryBuilder =
     ViewQueryBuilder(this.host, this.port, this.name, viewName)
 }
@@ -92,11 +106,13 @@ case class ViewQueryBuilder(
   def limit(limit: Int): ViewQueryBuilder = this.copy(limit=Some(limit))
   def reduce(reduce: Boolean): ViewQueryBuilder = this.copy(reduce=Some(reduce))
   def includeDocs: ViewQueryBuilder = this.copy(include_docs=Some(true))
+  def keys(xs: Seq[Any]) = this.copy(keys=Some(xs))
 
   def execute: Future[ViewResult] = {
     log.info(s"COUCH: VIEW $viewName")
     doViewRequest(viewName, queryBody, queryParams) map {
-      j: String => json.parse(j).extract[ViewResult]
+      j: String =>
+        json.parse(j).extract[ViewResult]
     }
   }
 
