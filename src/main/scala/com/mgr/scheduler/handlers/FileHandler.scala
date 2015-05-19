@@ -4,6 +4,7 @@ import com.twitter.util.Future
 
 import com.mgr.scheduler.config.Config
 import com.mgr.scheduler.docs
+import com.mgr.scheduler.serializers
 import com.mgr.thrift.scheduler
 import com.mgr.utils.couch.Client
 import com.mgr.utils.couch.ViewResult
@@ -57,6 +58,21 @@ object FileHandler extends Logging {
     query.execute map { result: ViewResult =>
       result.mapValues[docs.FileInfoView, scheduler.FileBasicInfo]
         { _.toThrift } filter { _.id != DEFAULT_FILE }
+    }
+  }
+
+  def save(fileId: String, content: String): Future[Unit] = {
+    log.info(s"Saving file $fileId")
+
+    val file = serializers.Ii(fileId, content).toFileDef
+    val valid = file.isValid
+    if (!valid._2) {
+      throw scheduler.SchedulerException(s"File is not valid: ${valid._1}")
+    }
+
+    couchClient.get[docs.File](fileId) flatMap { doc =>
+      val newFile = doc.copy(content = content)
+      couchClient.update[docs.File](newFile) map { _ => () }
     }
   }
 

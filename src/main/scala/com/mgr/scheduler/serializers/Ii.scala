@@ -3,7 +3,9 @@ package com.mgr.scheduler.serializers
 import com.mgr.scheduler.datastructures
 import com.mgr.scheduler.docs
 
-case class Ii(configId: String, data: String) extends Base {
+case class Ii(fileId: String, data: String) extends Base {
+
+  val configId: String = "fake"
 
   val allTerms: Seq[docs.Term] = (0 to 5).map({ day =>
     (8 to 21).map { hour =>
@@ -165,21 +167,20 @@ case class Ii(configId: String, data: String) extends Base {
     splittedLines.zipWithIndex
   }
 
-  def toConfigDef: datastructures.Config = {
-    // TODO(gosia): groups starting with 2 are ignored
+  def toFileDef: datastructures.File = {
     val lines = data.split("\n")
     val tLines = lines filter { x => x.startsWith("o|")}
     val s1Lines = lines filter { x => x.startsWith("1|")}
-    // val s2Lines = lines filter { x => x.startsWith("2|")}
+    val s2Lines = lines filter { x => x.startsWith("2|")}
 
     val teachers: Seq[docs.Teacher] = getTeacherDocs(tLines)
     val rooms: Seq[docs.Room] = getRoomDocs
     val labels: Seq[docs.Label] = getLabelDocs
 
     val groups1 = getGroupDocs(s1Lines)
-    // val groups2 = getGroupDocs(s2Lines)
+    val groups2 = getGroupDocs(s2Lines)
 
-    datastructures.Config(
+    val config1 = datastructures.Config(
       teachers = teachers,
       labels = labels,
       groups = groups1,
@@ -187,5 +188,16 @@ case class Ii(configId: String, data: String) extends Base {
       rooms = rooms,
       configId = configId
     )
+    val config2 = datastructures.Config(
+      teachers = teachers,
+      labels = labels,
+      groups = groups1,
+      terms = allTerms,
+      rooms = rooms,
+      configId = configId
+    )
+
+    datastructures.File(config1, config2)
+
   }
 }

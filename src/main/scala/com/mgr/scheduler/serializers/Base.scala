@@ -4,5 +4,5 @@ import com.mgr.scheduler.datastructures
 import com.mgr.utils.logging.Logging
 
 abstract class Base extends Logging {
-  def toConfigDef: datastructures.Config
+  def toFileDef: datastructures.File
 }

@@ -286,4 +286,11 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
+  void saveFile(
+    1: Id file_id;
+    2: string content;
+  ) throws (
+    1: SchedulerException se;
+  )
+
 }

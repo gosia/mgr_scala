@@ -434,15 +434,14 @@ object ConfigHandler extends Logging {
   }
 
   def importData(configId: String, data: String): Future[Unit] = {
+    // TODO(gosia): remove this function?
     val doc = docs.ImportData(configId, data)
 
     couchClient.add[docs.ImportData](doc) flatMap { _ =>
-      val config = serializers.Ii(configId, data).toConfigDef
+      val file = serializers.Ii("fileid", data).toFileDef
+      val config = file.config1
 
-      val valid = isValidConfig(
-        configId, config.terms, config.rooms, config.teachers,
-        config.groups, config.labels
-      )
+      val valid = config.isValid
       if (!valid._2) {
         throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
       }

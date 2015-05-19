@@ -142,4 +142,8 @@ class SchedulerServiceImpl(
     handlers.FileHandler.list() handle exceptions
   }
 
+  def saveFile(fileId: String, content: String): Future[Unit] = {
+    handlers.FileHandler.save(fileId, content) handle exceptions
+  }
+
 }
