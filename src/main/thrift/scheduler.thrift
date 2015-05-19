@@ -111,6 +111,22 @@ struct Timetable {
   2: string human_readable;
 }
 
+struct FileCreationInfo {
+  1: Id id;
+  2: i16 year;
+}
+
+struct FileBasicInfo {
+  1: Id id;
+  2: i16 year;
+  3: bool linked;
+}
+
+struct File {
+  1: FileBasicInfo info;
+  2: string content;
+}
+
 service SchedulerService {
 
   void createConfig(
@@ -245,6 +261,28 @@ service SchedulerService {
     1: Id task_id;
     2: Id group_id;
   ) throws (
+    1: SchedulerException se;
+  )
+
+  File createFile(
+    1: FileCreationInfo info;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  void deleteFile(
+    1: Id file_id;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  File getFile(
+    1: Id file_id;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  list<FileBasicInfo> getFiles() throws (
     1: SchedulerException se;
   )
 

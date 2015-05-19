@@ -129,4 +129,17 @@ class SchedulerServiceImpl(
     handlers.TaskHandler.getGroupBusyTerms(taskId, groupId) handle exceptions
   }
 
+  def createFile(info: scheduler.FileCreationInfo): Future[scheduler.File] = {
+    handlers.FileHandler.create(info) handle exceptions
+  }
+  def deleteFile(fileId: String): Future[Unit] = {
+    handlers.FileHandler.delete(fileId) handle exceptions
+  }
+  def getFile(fileId: String): Future[scheduler.File] = {
+    handlers.FileHandler.get(fileId) handle exceptions
+  }
+  def getFiles(): Future[Seq[scheduler.FileBasicInfo]] = {
+    handlers.FileHandler.list() handle exceptions
+  }
+
 }

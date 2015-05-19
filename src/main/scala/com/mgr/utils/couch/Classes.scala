@@ -77,10 +77,14 @@ final case class ViewResult(
   def mapDocs[DocType: Manifest, T](f: DocType => T): Seq[T] = {
     rows map { _.doc.extract[DocType] } map f
   }
+  def mapValues[DocType: Manifest, T](f: DocType => T): Seq[T] = {
+    rows map { _.value.extract[DocType] } map f
+  }
 
   def ids: Seq[String] = rows.map(_.id)
 
   def docs[DocType: Manifest]: Seq[DocType] = rows map { _.doc.extract[DocType] }
+  def values[DocType: Manifest]: Seq[DocType] = rows map { _.value.extract[DocType] }
   def docIds: Seq[String] = rows map { _.id }
   def docInfos: Seq[DocInfo] = rows map { row =>
     val rev = row.value.asInstanceOf[json.JString].values
