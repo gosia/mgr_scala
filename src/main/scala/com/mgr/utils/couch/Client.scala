@@ -113,7 +113,7 @@ case class ViewQueryBuilder(
   def limit(limit: Int): ViewQueryBuilder = this.copy(limit=Some(limit))
   def reduce(reduce: Boolean): ViewQueryBuilder = this.copy(reduce=Some(reduce))
   def includeDocs: ViewQueryBuilder = this.copy(include_docs=Some(true))
-  def keys(xs: Seq[Any]) = this.copy(keys=Some(xs))
+  def keys(xs: Seq[Any]): ViewQueryBuilder = this.copy(keys=Some(xs))
 
   def execute: Future[ViewResult] = {
     log.info(s"COUCH: VIEW $viewName")
