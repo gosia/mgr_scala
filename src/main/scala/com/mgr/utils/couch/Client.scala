@@ -5,6 +5,7 @@ import com.twitter.finagle.builder.ClientBuilder
 import com.twitter.finagle.filter.MaskCancelFilter
 import com.twitter.finagle.http.Http
 import com.twitter.finagle.http.Response
+import com.twitter.util.Duration
 import com.twitter.util.Future
 import java.net.URLEncoder
 import net.liftweb.json
@@ -27,7 +28,9 @@ case class Server(host: String, port: Int) {
 case class Client(
   host: String,
   port: Int,
-  name: String
+  name: String,
+  timeout: Duration = 5.seconds,
+  tcpTimeout: Duration = 3.seconds
 ) extends RequestUtils {
 
   def add[DocType <: Document : Manifest](doc: DocType): Future[CouchResponse] = {
@@ -82,13 +85,17 @@ case class Client(
   }
 
   def view(viewName: String): ViewQueryBuilder =
-    ViewQueryBuilder(this.host, this.port, this.name, viewName)
+    ViewQueryBuilder(
+      this.host, this.port, this.name, this.timeout, this.tcpTimeout, viewName
+    )
 }
 
 case class ViewQueryBuilder(
   host: String,
   port: Int,
   name: String,
+  timeout: Duration,
+  tcpTimeout: Duration,
   viewName: String,
 
   keys: Option[Seq[Any]] = None,
@@ -149,14 +156,16 @@ trait RequestUtils extends Logging {
   val host: String
   val port: Int
   val name: String
+  val timeout: Duration
+  val tcpTimeout: Duration
 
   lazy val couchBuilder = {
     ClientBuilder()
       .codec(Http())
       .hosts(s"${this.host}:${this.port}")
       .hostConnectionLimit(1)
-      .tcpConnectTimeout(3.seconds)
-      .timeout(5.seconds)
+      .tcpConnectTimeout(tcpTimeout)
+      .timeout(timeout)
   }
 
   private def setCommonHeaders(

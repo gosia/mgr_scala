@@ -2,18 +2,15 @@ package com.mgr.scheduler.handlers
 
 import com.twitter.util.Future
 
-import com.mgr.scheduler.config.Config
+import com.mgr.scheduler.Couch
 import com.mgr.scheduler.docs
 import com.mgr.scheduler.serializers
 import com.mgr.thrift.scheduler
-import com.mgr.utils.couch.Client
 import com.mgr.utils.couch.CouchResponse
 import com.mgr.utils.couch.ViewResult
 import com.mgr.utils.logging.Logging
 
-object ConfigHandler extends Logging {
-
-  lazy val couchClient = Client(Config.couchHost, Config.couchPort, "scheduler")
+object ConfigHandler extends Logging  with Couch {
 
   def isValidConfig(
     id: String,

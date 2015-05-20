@@ -2,20 +2,15 @@ package com.mgr.scheduler.handlers
 
 import com.twitter.util.Future
 
-import com.mgr.scheduler.config.Config
+import com.mgr.scheduler.Couch
 import com.mgr.scheduler.docs
 import com.mgr.scheduler.serializers
 import com.mgr.thrift.scheduler
-import com.mgr.utils.couch.Client
 import com.mgr.utils.couch.ViewResult
 import com.mgr.utils.logging.Logging
 
-object FileHandler extends Logging {
+object FileHandler extends Logging with Couch {
   val DEFAULT_FILE = "system:default_content"
-
-  lazy val couchClient = Client(Config.couchHost, Config.couchPort, "scheduler")
-
-  def isValid(content: String): (Option[String], Boolean) = ???
 
   def create(info: scheduler.FileCreationInfo): Future[scheduler.File] = {
     log.info(s"Creating file ${info.id}")
