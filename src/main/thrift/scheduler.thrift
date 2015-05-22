@@ -116,10 +116,16 @@ struct FileCreationInfo {
   2: i16 year;
 }
 
+struct FileConfigs {
+  1: Id configId1;
+  2: Id configId2;
+}
+
 struct FileBasicInfo {
   1: Id id;
   2: i16 year;
   3: bool linked;
+  4: optional FileConfigs configs;
 }
 
 struct File {
@@ -289,6 +295,12 @@ service SchedulerService {
   void saveFile(
     1: Id file_id;
     2: string content;
+  ) throws (
+    1: SchedulerException se;
+  )
+
+  FileBasicInfo linkFile(
+    1: Id file_id;
   ) throws (
     1: SchedulerException se;
   )

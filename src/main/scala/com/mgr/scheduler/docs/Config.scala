@@ -9,5 +9,7 @@ final case class Config(
   year: Int,
   term: String,
 
+  file: Option[String] = None,
+
   `type`: String = "config"
 ) extends couch.Document

@@ -6,6 +6,7 @@ import com.mgr.scheduler.Couch
 import com.mgr.scheduler.docs
 import com.mgr.scheduler.serializers
 import com.mgr.thrift.scheduler
+import com.mgr.utils.couch.CouchResponse
 import com.mgr.utils.couch.ViewResult
 import com.mgr.utils.logging.Logging
 
@@ -69,6 +70,48 @@ object FileHandler extends Logging with Couch {
       val newFile = doc.copy(content = content)
       couchClient.update[docs.File](newFile) map { _ => () }
     }
+  }
+
+  def link(fileId: String): Future[scheduler.FileBasicInfo] = {
+    log.info(s"Linking file $fileId")
+
+    couchClient.get[docs.File](fileId) flatMap { doc =>
+      val file = serializers.Ii(fileId, doc.content).toFileDef
+
+      val config1 = docs.Config(
+        _id = file.config1.configId,
+        year = doc.year,
+        term = "winter",
+        file = Some(file.id)
+      )
+
+      val config2 = docs.Config(
+        _id = file.config2.configId,
+        year = doc.year,
+        term = "summer",
+        file = Some(file.id)
+      )
+
+      val part1 = Seq(config1) ++ file.config1.allDocs
+      val part2 = Seq(config2) ++ file.config2.allDocs
+
+      couchClient.bulkAdd(part1) flatMap { rseq: Seq[CouchResponse] => {
+        CouchResponse.logErrors(rseq)
+
+        couchClient.bulkAdd(part2) flatMap { rseq: Seq[CouchResponse] => {
+          CouchResponse.logErrors(rseq)
+
+          val newDoc = doc.link(file.config1.configId, file.config2.configId)
+          couchClient.update[docs.File](newDoc) map { _ =>
+            newDoc.toThrift.info
+          }
+
+        }}
+
+      }}
+
+    }
+
   }
 
 }

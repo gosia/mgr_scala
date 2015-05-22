@@ -1,6 +1,7 @@
 package com.mgr.scheduler.datastructures
 
 case class File(
+  id: String,
   config1: Config,
   config2: Config
 ) {

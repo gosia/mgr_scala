@@ -146,4 +146,8 @@ class SchedulerServiceImpl(
     handlers.FileHandler.save(fileId, content) handle exceptions
   }
 
+  def linkFile(fileId: String): Future[scheduler.FileBasicInfo] = {
+    handlers.FileHandler.link(fileId) handle exceptions
+  }
+
 }

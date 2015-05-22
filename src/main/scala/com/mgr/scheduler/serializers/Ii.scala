@@ -5,9 +5,10 @@ import com.mgr.scheduler.docs
 
 case class Ii(fileId: String, data: String) extends Base {
 
-  val configId: String = "fake"
+  val configId1: String = s"$fileId-1"
+  val configId2: String = s"$fileId-2"
 
-  val allTerms: Seq[docs.Term] = (0 to 5).map({ day =>
+  def allTermsF(configId: String): Seq[docs.Term] = (0 to 5).map({ day =>
     (8 to 21).map { hour =>
       (day == 0 && hour < 12) || (day == 4 && hour >= 12) match {
         case true => None
@@ -15,9 +16,14 @@ case class Ii(fileId: String, data: String) extends Base {
       }
     }
   }).flatten.flatten
-  val allTermIds = allTerms map { _._id }
 
-  private def getTeacherDocs(lines: Seq[String]): Seq[docs.Teacher] = {
+  val allTerms: Map[String, Seq[docs.Term]] = Map(
+    configId1 -> allTermsF(configId1),
+    configId2 -> allTermsF(configId2)
+  )
+  val allTermIds = allTerms mapValues { _.map(_._id) }
+
+  private def getTeacherDocs(lines: Seq[String], configId: String): Seq[docs.Teacher] = {
     lines map { line =>
       val parts = line.split("\\|")
       val id = parts(1)
@@ -30,7 +36,7 @@ case class Ii(fileId: String, data: String) extends Base {
       docs.Teacher(
         _id = docs.Teacher.getCouchId(configId, id),
         config_id = configId,
-        terms = allTermIds
+        terms = allTermIds(configId)
       )
     }
   }
@@ -58,7 +64,7 @@ case class Ii(fileId: String, data: String) extends Base {
     "r|25|200|wyklad,25"
   )
 
-  private def getRoomDocs: Seq[docs.Room] = {
+  private def getRoomDocs(configId: String): Seq[docs.Room] = {
     defaultRooms map { room =>
       val parts = room.split("\\|")
       val id = parts(1)
@@ -68,14 +74,14 @@ case class Ii(fileId: String, data: String) extends Base {
       docs.Room(
         _id = docs.Room.getCouchId(configId, id),
         config_id = configId,
-        terms = allTermIds,
+        terms = allTermIds(configId),
         labels = labels map { docs.Label.getCouchId(configId, _) },
         capacity = capacity.toInt
       )
     }
   }
 
-  private def getLabelDocs: Seq[docs.Label] = {
+  private def getLabelDocs(configId: String): Seq[docs.Label] = {
     defaultRooms map { room =>
       val parts = room.split("\\|")
       val labels = parts(3).split(",")
@@ -86,7 +92,7 @@ case class Ii(fileId: String, data: String) extends Base {
     } flatten
   }
 
-  private val roomLabels: Map[String, Seq[String]] = Map(
+  private def roomLabels(configId: String): Map[String, Seq[String]] = Map(
     "w" -> Seq("wyklad"),
     "e" -> Seq("wyklad"),
     "c" -> Seq("cwiczenia"),
@@ -97,7 +103,7 @@ case class Ii(fileId: String, data: String) extends Base {
   ).mapValues { xs => xs.map(docs.Label.getCouchId(configId, _)) }
 
   private def diffTermGroups(
-    normLines: Seq[(Seq[String], Int)]
+    normLines: Seq[(Seq[String], Int)], configId: String
   ): Map[String, Seq[String]] = {
 
     val tGroups: Map[String, Set[Int]] = normLines.foldLeft(Map[String, Set[Int]]()) {
@@ -131,10 +137,10 @@ case class Ii(fileId: String, data: String) extends Base {
       ) } toMap
   }
 
-  private def getGroupDocs(lines: Seq[String]): Seq[docs.Group] = {
+  private def getGroupDocs(lines: Seq[String], configId: String): Seq[docs.Group] = {
 
     val normLines = normalizeGroupLines(lines)
-    val diffGroups = diffTermGroups(normLines)
+    val diffGroups = diffTermGroups(normLines, configId)
 
     normLines map { case (parts, groupId) =>
       val (courseName, groupType, hours, teacherId) = (parts(2), parts(3), parts(4), parts(5))
@@ -144,10 +150,10 @@ case class Ii(fileId: String, data: String) extends Base {
         _id = id,
         config_id = configId,
         diff_term_groups = diffGroups.getOrElse(id, Seq()),
-        labels = roomLabels.getOrElse(groupType, Seq()),
+        labels = roomLabels(configId).getOrElse(groupType, Seq()),
         same_term_groups = Seq(),
         teachers = Seq(docs.Teacher.getCouchId(configId, teacherId)),
-        terms = allTermIds,
+        terms = allTermIds(configId),
         terms_num = hours.toInt,
         students_num = 15,
         extra = Some(docs.GroupExtra(course = courseName, group_type = groupType))
@@ -173,31 +179,35 @@ case class Ii(fileId: String, data: String) extends Base {
     val s1Lines = lines filter { x => x.startsWith("1|")}
     val s2Lines = lines filter { x => x.startsWith("2|")}
 
-    val teachers: Seq[docs.Teacher] = getTeacherDocs(tLines)
-    val rooms: Seq[docs.Room] = getRoomDocs
-    val labels: Seq[docs.Label] = getLabelDocs
+    val teachers1: Seq[docs.Teacher] = getTeacherDocs(tLines, configId1)
+    val rooms1: Seq[docs.Room] = getRoomDocs(configId1)
+    val labels1: Seq[docs.Label] = getLabelDocs(configId1)
 
-    val groups1 = getGroupDocs(s1Lines)
-    val groups2 = getGroupDocs(s2Lines)
+    val teachers2: Seq[docs.Teacher] = getTeacherDocs(tLines, configId2)
+    val rooms2: Seq[docs.Room] = getRoomDocs(configId2)
+    val labels2: Seq[docs.Label] = getLabelDocs(configId2)
+
+    val groups1 = getGroupDocs(s1Lines, configId1)
+    val groups2 = getGroupDocs(s2Lines, configId2)
 
     val config1 = datastructures.Config(
-      teachers = teachers,
-      labels = labels,
+      teachers = teachers1,
+      labels = labels1,
       groups = groups1,
-      terms = allTerms,
-      rooms = rooms,
-      configId = configId
+      terms = allTerms(configId1),
+      rooms = rooms1,
+      configId = configId1
     )
     val config2 = datastructures.Config(
-      teachers = teachers,
-      labels = labels,
-      groups = groups1,
-      terms = allTerms,
-      rooms = rooms,
-      configId = configId
+      teachers = teachers2,
+      labels = labels2,
+      groups = groups2,
+      terms = allTerms(configId2),
+      rooms = rooms2,
+      configId = configId2
     )
 
-    datastructures.File(config1, config2)
+    datastructures.File(fileId, config1, config2)
 
   }
 }
