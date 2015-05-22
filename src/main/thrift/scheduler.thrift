@@ -63,18 +63,25 @@ struct Group {
   9: optional GroupExtra extra;
 }
 
-struct ConfigInfo {
+struct ConfigCreationInfo {
   1: Id id;
-  2: list<Term> terms;
-  3: list<Room> rooms;
-  4: list<Teacher> teachers;
-  5: list<Group> groups;
+  2: i16 year;
+  3: string term;
 }
 
 struct ConfigBasicInfo {
   1: Id id;
   2: i16 year;
-  3: string term; 
+  3: string term;
+  4: optional Id file;
+}
+
+struct Config {
+  1: ConfigBasicInfo info;
+  2: list<Term> terms;
+  3: list<Room> rooms;
+  4: list<Teacher> teachers;
+  5: list<Group> groups;
 }
 
 enum Algorithm {
@@ -136,7 +143,7 @@ struct File {
 service SchedulerService {
 
   void createConfig(
-    1: ConfigBasicInfo info;
+    1: ConfigCreationInfo info;
     2: list<Term> terms;
     3: list<Room> rooms;
     4: list<Teacher> teachers;
@@ -145,7 +152,7 @@ service SchedulerService {
     1: SchedulerException se;
   )
 
-  ConfigInfo getConfigInfo(
+  Config getConfig(
       1: Id id;
   ) throws (
     1: SchedulerException se;

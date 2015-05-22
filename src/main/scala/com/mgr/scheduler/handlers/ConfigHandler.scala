@@ -49,7 +49,7 @@ object ConfigHandler extends Logging  with Couch {
   }
 
   def createConfig(
-    info: scheduler.ConfigBasicInfo,
+    info: scheduler.ConfigCreationInfo,
     terms: Seq[scheduler.Term],
     rooms: Seq[scheduler.Room],
     teachers: Seq[scheduler.Teacher],
@@ -156,16 +156,19 @@ object ConfigHandler extends Logging  with Couch {
     }}
   }
 
-  def getConfigInfo(configId: String): Future[scheduler.ConfigInfo] = {
+  def getConfig(configId: String): Future[scheduler.Config] = {
     log.info(s"Getting config info for config $configId")
-    getConfigDef(configId) map { case (groups, teachers, rooms, terms, labels) =>
-      scheduler.ConfigInfo(
-        configId,
-        terms.map(_.asThrift),
-        rooms.map(_.asThrift),
-        teachers.map(_.asThrift),
-        groups.map(_.asThrift)
-      )
+
+    couchClient.get[docs.Config](configId) flatMap { config =>
+      getConfigDef(configId) map { case (groups, teachers, rooms, terms, labels) =>
+        scheduler.Config(
+          scheduler.ConfigBasicInfo(configId, config.year.toShort, config.term, config.file),
+          terms.map(_.asThrift),
+          rooms.map(_.asThrift),
+          teachers.map(_.asThrift),
+          groups.map(_.asThrift)
+        )
+      }
     }
   }
 
@@ -194,7 +197,7 @@ object ConfigHandler extends Logging  with Couch {
       .includeDocs
 
     configsQuery.execute map { result: ViewResult => result mapDocs {
-      doc: docs.Config => scheduler.ConfigBasicInfo(doc._id, doc.year.toShort, doc.term)
+      doc: docs.Config => scheduler.ConfigBasicInfo(doc._id, doc.year.toShort, doc.term, doc.file)
     }}
   }
 

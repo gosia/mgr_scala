@@ -22,7 +22,7 @@ class SchedulerServiceImpl(
   }
 
   def createConfig(
-    info: scheduler.ConfigBasicInfo,
+    info: scheduler.ConfigCreationInfo,
     terms: Seq[scheduler.Term],
     rooms: Seq[scheduler.Room],
     teachers: Seq[scheduler.Teacher],
@@ -31,8 +31,8 @@ class SchedulerServiceImpl(
     handlers.ConfigHandler.createConfig(info, terms, rooms, teachers, groups) handle exceptions
   }
 
-  def getConfigInfo(configId: String): Future[scheduler.ConfigInfo] = {
-    handlers.ConfigHandler.getConfigInfo(configId) handle exceptions
+  def getConfig(configId: String): Future[scheduler.Config] = {
+    handlers.ConfigHandler.getConfig(configId) handle exceptions
   }
 
   def deleteConfig(configId: String): Future[Unit] = {
