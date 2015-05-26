@@ -4,8 +4,8 @@ import com.twitter.util.Future
 
 import com.mgr.scheduler.Couch
 import com.mgr.scheduler.docs
-import com.mgr.scheduler.serializers
 import com.mgr.thrift.scheduler
+import com.mgr.thrift.scheduler.ValidationException
 import com.mgr.utils.couch.CouchResponse
 import com.mgr.utils.couch.ViewResult
 import com.mgr.utils.logging.Logging
@@ -58,33 +58,36 @@ object ConfigHandler extends Logging  with Couch {
     val id = info.id
     log.info(s"Adding config $id")
 
-    val termDocs = terms map { docs.Term(id, _) }
-    val roomDocs = rooms map { docs.Room(id, _) }
-    val teacherDocs = teachers map { docs.Teacher(id, _) }
-    val groupDocs = groups map { docs.Group(id, _) }
-    val configDoc = docs.Config(_id=id, year=info.year, term=info.term)
+    couchClient.exists(id) map { exists =>
 
-    val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
-      case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
-    }) toSeq
-    val labelDocs = labelIds map { docs.Label(id, _) }
-
-    val valid = isValidConfig(id, termDocs, roomDocs, teacherDocs, groupDocs, labelDocs)
-    if (!valid._2) {
-      throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
-    }
-
-    val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs ++ Seq(configDoc)
-
-    couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
-      val errors: Seq[String] = rseq.map(_.errorMsg).flatten
-      errors.length match {
-        case 0 => ()
-        case n if n > 0 =>
-          log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
-          ()
+      if (exists) {
+        throw scheduler.ValidationException("Przydział o podanym id już istnieje")
       }
-    }}
+
+      val termDocs = terms map { docs.Term(id, _) }
+      val roomDocs = rooms map { docs.Room(id, _) }
+      val teacherDocs = teachers map { docs.Teacher(id, _) }
+      val groupDocs = groups map { docs.Group(id, _) }
+      val configDoc = docs.Config(_id=id, year=info.year, term=info.term)
+
+      val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
+        case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
+      }) toSeq
+      val labelDocs = labelIds map { docs.Label(id, _) }
+
+      val valid = isValidConfig(id, termDocs, roomDocs, teacherDocs, groupDocs, labelDocs)
+      if (!valid._2) {
+        throw scheduler.ValidationException(s"Przydział nie jest poprawny: ${valid._1}")
+      }
+
+      val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs ++ Seq(configDoc)
+
+      couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+        CouchResponse.logErrors(rseq)
+        ()
+      }}
+
+    }
   }
 
   def getConfigDef(configId: String): Future[(
@@ -159,16 +162,18 @@ object ConfigHandler extends Logging  with Couch {
   def getConfig(configId: String): Future[scheduler.Config] = {
     log.info(s"Getting config info for config $configId")
 
-    couchClient.get[docs.Config](configId) flatMap { config =>
-      getConfigDef(configId) map { case (groups, teachers, rooms, terms, labels) =>
-        scheduler.Config(
-          scheduler.ConfigBasicInfo(configId, config.year.toShort, config.term, config.file),
-          terms.map(_.asThrift),
-          rooms.map(_.asThrift),
-          teachers.map(_.asThrift),
-          groups.map(_.asThrift)
-        )
-      }
+    couchClient.get[docs.Config](configId) flatMap {
+      case None => throw ValidationException(s"Przydział $configId nie istnieje")
+      case Some(config) =>
+        getConfigDef(configId) map { case (groups, teachers, rooms, terms, labels) =>
+          scheduler.Config(
+            scheduler.ConfigBasicInfo(configId, config.year.toShort, config.term, config.file),
+            terms.map(_.asThrift),
+            rooms.map(_.asThrift),
+            teachers.map(_.asThrift),
+            groups.map(_.asThrift)
+          )
+        }
     }
   }
 
@@ -210,40 +215,52 @@ object ConfigHandler extends Logging  with Couch {
   ): Future[Unit] = {
     log.info(s"Adding elements for config $configId")
 
-    val termDocs = terms map { docs.Term(configId, _) }
-    val roomDocs = rooms map { docs.Room(configId, _) }
-    val teacherDocs = teachers map { docs.Teacher(configId, _) }
-    val groupDocs = groups map { docs.Group(configId, _) }
+    couchClient.exists(configId) map { exists =>
 
-    val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
-      case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
-    }) toSeq
-    val labelDocs = labelIds map { docs.Label(configId, _) }
-
-    getConfigDef(configId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
-      val valid = isValidConfig(
-        configId,
-        termDocs ++ exTerms,
-        roomDocs ++ exRooms,
-        teacherDocs ++ exTeachers,
-        groupDocs ++ exGroups,
-        labelDocs ++ exLabels
-      )
-      if (!valid._2) {
-        throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
+      if (!exists) {
+        throw scheduler.ValidationException(s"Przydział $configId nie istnieje")
       }
 
-      val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
+      val termDocs = terms map {
+        docs.Term(configId, _)
+      }
+      val roomDocs = rooms map {
+        docs.Room(configId, _)
+      }
+      val teacherDocs = teachers map {
+        docs.Teacher(configId, _)
+      }
+      val groupDocs = groups map {
+        docs.Group(configId, _)
+      }
 
-      couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
-        val errors: Seq[String] = rseq.map(_.errorMsg).flatten
-        errors.length match {
-          case 0 => ()
-          case n if n > 0 =>
-            log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
-            ()
+      val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
+        case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
+      }) toSeq
+      val labelDocs = labelIds map {
+        docs.Label(configId, _)
+      }
+
+      getConfigDef(configId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
+        val valid = isValidConfig(
+          configId,
+          termDocs ++ exTerms,
+          roomDocs ++ exRooms,
+          teacherDocs ++ exTeachers,
+          groupDocs ++ exGroups,
+          labelDocs ++ exLabels
+        )
+        if (!valid._2) {
+          throw scheduler.ValidationException(s"Przydział nie jest poprawny: ${valid._1}")
         }
-      }}
+
+        val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
+
+        couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+          CouchResponse.logErrors(rseq)
+          ()
+        } }
+      }
     }
 
   }
@@ -257,62 +274,64 @@ object ConfigHandler extends Logging  with Couch {
   ): Future[Unit] = {
     log.info(s"Editing elements for config $configId")
 
-    getConfigDefMap(configId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
+    couchClient.exists(configId) map { exists =>
 
-      val ex = scheduler.SchedulerException("Id doesn't exist")
-
-      val termDocs = terms map { x =>
-        docs.Term(configId, x)
-          .copy(_rev=exTerms.getOrElse(docs.Term.getCouchId(configId, x.id), throw ex)._rev)
-      }
-      val roomDocs = rooms map { x =>
-        docs.Room(configId, x)
-          .copy(_rev=exRooms.getOrElse(docs.Room.getCouchId(configId, x.id), throw ex)._rev)
-      }
-      val teacherDocs = teachers map { x =>
-        docs.Teacher(configId, x)
-          .copy(_rev=exTeachers.getOrElse(docs.Teacher.getCouchId(configId, x.id), throw ex)._rev)
-      }
-      val groupDocs = groups map { x =>
-        docs.Group(configId, x)
-          .copy(_rev=exGroups.getOrElse(docs.Group.getCouchId(configId, x.id), throw ex)._rev)
-      }
-      val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
-        case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
-      }) toSeq
-      val labelDocs = labelIds map { x =>
-        docs.Label(configId, x)
-          .copy(_rev=exLabels.get(docs.Label.getCouchId(configId, x)).map(_._rev).flatten)
+      if (!exists) {
+        throw scheduler.ValidationException(s"Przydział $configId nie istnieje")
       }
 
-      val termIds = termDocs.map(_._id).toSet
-      val roomIds = roomDocs.map(_._id).toSet
-      val teacherIds = teacherDocs.map(_._id).toSet
-      val groupIds = groupDocs.map(_._id).toSet
+      getConfigDefMap(configId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
 
-      val valid = isValidConfig(
-        configId,
-        termDocs ++ exTerms.values.toSeq.filter(x => !termIds.contains(x._id)),
-        roomDocs ++ exRooms.values.toSeq.filter(x => !roomIds.contains(x._id)),
-        teacherDocs ++ exTeachers.values.toSeq.filter(x => !teacherIds.contains(x._id)),
-        groupDocs ++ exGroups.values.toSeq.filter(x => !groupIds.contains(x._id)),
-        labelDocs ++ exLabels.values.toSeq.filter(x => !labelIds.contains(x._id))
-      )
-      if (!valid._2) {
-        throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
-      }
+        val ex = scheduler.ValidationException("Id elementu nie istnieje")
 
-      val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
-
-      couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
-        val errors: Seq[String] = rseq.map(_.errorMsg).flatten
-        errors.length match {
-          case 0 => ()
-          case n if n > 0 =>
-            log.warning(s"Errors with bulk add: ${errors.mkString(", ")}")
-            ()
+        val termDocs = terms map { x =>
+          docs.Term(configId, x)
+            .copy(_rev = exTerms.getOrElse(docs.Term.getCouchId(configId, x.id), throw ex)._rev)
         }
-      }}
+        val roomDocs = rooms map { x =>
+          docs.Room(configId, x)
+            .copy(_rev = exRooms.getOrElse(docs.Room.getCouchId(configId, x.id), throw ex)._rev)
+        }
+        val teacherDocs = teachers map { x =>
+          docs.Teacher(configId, x)
+            .copy(_rev = exTeachers.getOrElse(docs.Teacher.getCouchId(configId, x.id), throw ex)._rev)
+        }
+        val groupDocs = groups map { x =>
+          docs.Group(configId, x)
+            .copy(_rev = exGroups.getOrElse(docs.Group.getCouchId(configId, x.id), throw ex)._rev)
+        }
+        val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
+          case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
+        }) toSeq
+        val labelDocs = labelIds map { x =>
+          docs.Label(configId, x)
+            .copy(_rev = exLabels.get(docs.Label.getCouchId(configId, x)).map(_._rev).flatten)
+        }
+
+        val termIds = termDocs.map(_._id).toSet
+        val roomIds = roomDocs.map(_._id).toSet
+        val teacherIds = teacherDocs.map(_._id).toSet
+        val groupIds = groupDocs.map(_._id).toSet
+
+        val valid = isValidConfig(
+          configId,
+          termDocs ++ exTerms.values.toSeq.filter(x => !termIds.contains(x._id)),
+          roomDocs ++ exRooms.values.toSeq.filter(x => !roomIds.contains(x._id)),
+          teacherDocs ++ exTeachers.values.toSeq.filter(x => !teacherIds.contains(x._id)),
+          groupDocs ++ exGroups.values.toSeq.filter(x => !groupIds.contains(x._id)),
+          labelDocs ++ exLabels.values.toSeq.filter(x => !labelIds.contains(x._id))
+        )
+        if (!valid._2) {
+          throw scheduler.ValidationException(s"Przydział nie jest poprawny: ${valid._1}")
+        }
+
+        val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
+
+        couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+          CouchResponse.logErrors(rseq)
+          ()
+        } }
+      }
     }
   }
 
@@ -328,11 +347,12 @@ object ConfigHandler extends Logging  with Couch {
       "teacher" -> docs.Teacher
     )
     val cls = clsMap.getOrElse(
-      elementType, throw scheduler.SchedulerException("Wrong element type")
+      elementType, throw scheduler.ValidationException(s"Niepoprawny typ elementu $elementType")
     )
 
-    couchClient.get[docs.BaseDoc](cls.getCouchId(configId, elementId)) map { doc =>
-      couchClient.delete[docs.BaseDoc](doc) map { _ => () }
+    couchClient.get[docs.BaseDoc](cls.getCouchId(configId, elementId)) flatMap {
+      case None => throw scheduler.ValidationException(s"Element $elementId nie istnieje")
+      case Some(doc) => couchClient.delete[docs.BaseDoc](doc) map { _ => () }
     }
   }
 
@@ -342,114 +362,110 @@ object ConfigHandler extends Logging  with Couch {
     log.info(s"Copying $elementsType from $fromConfigId to $toConfigId")
 
     if (!Set("room", "teacher", "term").contains(elementsType)) {
-      throw scheduler.SchedulerException("Wrong elements type")
+      throw scheduler.ValidationException(s"Niepoprawny typ elementu $elementsType")
     }
 
-    getConfigDef(toConfigId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
-      val teacherQ = couchClient.view("teachers/by_config")
-        .startkey(fromConfigId).endkey(fromConfigId).includeDocs
-      val roomQ = couchClient.view("rooms/by_config")
-        .startkey(fromConfigId).endkey(fromConfigId).includeDocs
-      val termQ = couchClient.view("terms/by_config")
-        .startkey(fromConfigId).endkey(fromConfigId).includeDocs
+    couchClient.exists(toConfigId) map { exists =>
 
-      termQ.execute flatMap { termR: ViewResult =>
-        val fromTerms = termR.docs[docs.Term]
+      if (!exists) {
+        throw scheduler.ValidationException(s"Przydział $toConfigId nie istnieje")
+      }
 
-        val newTeachersF = elementsType match {
-          case "teacher" =>
-            teacherQ.execute map { teacherR: ViewResult => teacherR.docs[docs.Teacher] }
-          case _ => Future.value(Seq())
-        }
-        val newRoomsF = elementsType match {
-          case "room" => roomQ.execute map { roomR: ViewResult => roomR.docs[docs.Room] }
-          case _ => Future.value(Seq())
-        }
+      getConfigDef(toConfigId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
+        val teacherQ = couchClient.view("teachers/by_config")
+          .startkey(fromConfigId).endkey(fromConfigId).includeDocs
+        val roomQ = couchClient.view("rooms/by_config")
+          .startkey(fromConfigId).endkey(fromConfigId).includeDocs
+        val termQ = couchClient.view("terms/by_config")
+          .startkey(fromConfigId).endkey(fromConfigId).includeDocs
 
-        newTeachersF flatMap { fromTeachers: Seq[docs.Teacher] =>
-          newRoomsF flatMap { fromRooms =>
+        termQ.execute flatMap { termR: ViewResult =>
+          val fromTerms = termR.docs[docs.Term]
 
-            val newRooms = fromRooms map { _.editConfig(toConfigId) }
-            val newTeachers = fromTeachers map { _.editConfig(toConfigId) }
-
-            val newTermIds: Seq[String] = elementsType match {
-              case "term" => fromTerms map { _.getRealId }
-              case "teacher" => fromTeachers map { t: docs.Teacher => t.terms map {
-                  x: String => docs.Term.getRealId(x)
-                }} flatten
-              case "room" => fromRooms map { r: docs.Room => r.terms map {
-                  x: String => docs.Term.getRealId(x)
-                }} flatten
-            }
-            val newTermIdsSet = newTermIds.toSeq
-            val newTerms = fromTerms filter {
-              x: docs.Term => newTermIdsSet.contains(x.getRealId)
-            } map { x => x.editConfig(toConfigId) } filter { t =>
-              val equalExTerms = exTerms.filter(_._id == t._id)
-              equalExTerms match {
-                case Seq(x) =>
-                  if (x.isTheSame(t)) {
-                    false
-                  } else {
-                    throw scheduler.SchedulerException(s"Term already exists: ${x.getRealId}")
-                  }
-                case Seq() => true
-              }
-            }
-
-            val newLabels = newRooms.map(r => r.labels.map(docs.Label.getRealId)).flatten
-              .filter(l => !exLabels.exists(_.getRealId == l))
-              .map(l => docs.Label(toConfigId, l))
-
-            val valid = isValidConfig(
-              toConfigId, exTerms ++ newTerms, exRooms ++ newRooms, exTeachers ++ newTeachers,
-              exGroups, exLabels ++ newLabels
-            )
-            if (!valid._2) {
-              throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
-            }
-
-            val elementExistsAlready =
-              newTeachers.exists(t => exTeachers.exists(_._id == t._id)) ||
-              newRooms.exists(r => exRooms.exists(_._id == r._id))
-
-            if (elementExistsAlready) {
-              throw scheduler.SchedulerException(
-                s"Teacher or room already exists in config $toConfigId"
-              )
-            }
-
-            val newDocs = newTeachers ++ newLabels ++ newRooms ++ newTerms
-            couchClient.bulkAdd(newDocs).map { rseq: Seq[CouchResponse] => {
-              CouchResponse.logErrors(rseq)
-              ()
-            }}
-
+          val newTeachersF = elementsType match {
+            case "teacher" =>
+              teacherQ.execute map { teacherR: ViewResult => teacherR.docs[docs.Teacher]}
+            case _ => Future.value(Seq())
           }
+          val newRoomsF = elementsType match {
+            case "room" => roomQ.execute map { roomR: ViewResult => roomR.docs[docs.Room]}
+            case _ => Future.value(Seq())
+          }
+
+          newTeachersF flatMap { fromTeachers: Seq[docs.Teacher] =>
+            newRoomsF flatMap { fromRooms =>
+
+              val newRooms = fromRooms map {
+                _.editConfig(toConfigId)
+              }
+              val newTeachers = fromTeachers map {
+                _.editConfig(toConfigId)
+              }
+
+              val newTermIds: Seq[String] = elementsType match {
+                case "term" => fromTerms map {
+                  _.getRealId
+                }
+                case "teacher" => fromTeachers map { t: docs.Teacher => t.terms map {
+                  x: String => docs.Term.getRealId(x)
+                }
+                } flatten
+                case "room" => fromRooms map { r: docs.Room => r.terms map {
+                  x: String => docs.Term.getRealId(x)
+                }
+                } flatten
+              }
+              val newTermIdsSet = newTermIds.toSeq
+              val newTerms = fromTerms filter {
+                x: docs.Term => newTermIdsSet.contains(x.getRealId)
+              } map { x => x.editConfig(toConfigId)} filter { t =>
+                val equalExTerms = exTerms.filter(_._id == t._id)
+                equalExTerms match {
+                  case Seq(x) =>
+                    if (x.isTheSame(t)) {
+                      false
+                    } else {
+                      throw scheduler.ValidationException(s"Termin już istnieje: ${x.getRealId}")
+                    }
+                  case Seq() => true
+                }
+              }
+
+              val newLabels = newRooms.map(r => r.labels.map(docs.Label.getRealId)).flatten
+                .filter(l => !exLabels.exists(_.getRealId == l))
+                .map(l => docs.Label(toConfigId, l))
+
+              val valid = isValidConfig(
+                toConfigId, exTerms ++ newTerms, exRooms ++ newRooms, exTeachers ++ newTeachers,
+                exGroups, exLabels ++ newLabels
+              )
+              if (!valid._2) {
+                throw scheduler.ValidationException(s"Przydział nie jest poprawny: ${valid._1}")
+              }
+
+              val elementExistsAlready =
+                newTeachers.exists(t => exTeachers.exists(_._id == t._id)) ||
+                  newRooms.exists(r => exRooms.exists(_._id == r._id))
+
+              if (elementExistsAlready) {
+                throw scheduler.SchedulerException(
+                  s"Nauczyciel lub pokój już istnieje w przydziale $toConfigId"
+                )
+              }
+
+              val newDocs = newTeachers ++ newLabels ++ newRooms ++ newTerms
+              couchClient.bulkAdd(newDocs).map { rseq: Seq[CouchResponse] => {
+                CouchResponse.logErrors(rseq)
+                ()
+              }
+              }
+
+            }
+          }
+
         }
 
       }
-
-    }
-  }
-
-  def importData(configId: String, data: String): Future[Unit] = {
-    // TODO(gosia): remove this function?
-    val doc = docs.ImportData(configId, data)
-
-    couchClient.add[docs.ImportData](doc) flatMap { _ =>
-      val file = serializers.Ii("fileid", data).toFileDef
-      val config = file.config1
-
-      val valid = config.isValid
-      if (!valid._2) {
-        throw scheduler.SchedulerException(s"Config is not valid: ${valid._1}")
-      }
-
-      couchClient.bulkAdd(config.allDocs) map { rseq: Seq[CouchResponse] => {
-        CouchResponse.logErrors(rseq)
-        ()
-      }}
 
     }
   }

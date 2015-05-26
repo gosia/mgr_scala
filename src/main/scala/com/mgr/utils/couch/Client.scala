@@ -36,30 +36,37 @@ case class Client(
   def add[DocType <: Document : Manifest](doc: DocType): Future[CouchResponse] = {
     log.info(s"COUCH: ADD ${doc._id}")
     val content = json.Serialization.write(doc)
-    doDocumentRequest("PUT", Some(content), doc._id) map {
+    doDocumentRequest("PUT", Some(content), doc._id).map(_._2) map {
       j: String => json.parse(j).extract[CouchResponse]
     }
   }
 
-  def get[DocType <: Document : Manifest](id: String): Future[DocType] = {
+  def get[DocType <: Document : Manifest](id: String): Future[Option[DocType]] = {
     log.info(s"COUCH: GET $id")
-    doDocumentRequest("GET", None, id) map {
-      j: String => json.parse(j).extract[DocType]
+    doDocumentRequest("GET", None, id).map(_._2) map {
+      j: String => json.parse(j).extractOpt[DocType]
     }
   }
 
   def update[DocType <: Document : Manifest](doc: DocType): Future[CouchResponse] = {
     log.info(s"COUCH: UPDATE ${doc._id}")
     val content = json.Serialization.write(doc)
-    doDocumentRequest("PUT", Some(content), doc._id) map {
+    doDocumentRequest("PUT", Some(content), doc._id).map(_._2) map {
       j: String => json.parse(j).extract[CouchResponse]
     }
   }
 
   def delete[DocType <: Document : Manifest](doc: DocType): Future[CouchResponse] = {
     log.info(s"COUCH: DELETE ${doc._id}")
-    doDocumentRequest("DELETE", None, doc._id, doc._rev) map {
+    doDocumentRequest("DELETE", None, doc._id, doc._rev).map(_._2) map {
       j: String => json.parse(j).extract[CouchResponse]
+    }
+  }
+
+  def exists(id: String): Future[Boolean] = {
+    log.info(s"COUCH: HEAD $id")
+    doDocumentRequest("HEAD", None, id).map(_._1) map {
+      response: HttpResponse => List(200, 201, 202).contains(response.getStatus.getCode)
     }
   }
 
@@ -190,7 +197,7 @@ trait RequestUtils extends Logging {
 
   protected def doDocumentRequest(
     method: String, body: Option[String], id: String, rev: Option[String] = None
-  ): Future[String] = {
+  ): Future[(HttpResponse, String)] = {
     val revQuery = rev.map(r => s"?rev=$r").getOrElse("")
     doRequest(
       (method: String, body: Option[String]) =>
@@ -201,7 +208,7 @@ trait RequestUtils extends Logging {
   protected def doBulkRequest(method: String, body: Option[String]): Future[String] = {
     doRequest(
       (method: String, body: Option[String]) => s"/${this.name}/_bulk_docs"
-    )(method, body)
+    )(method, body).map(_._2)
   }
 
   protected def doViewRequest(
@@ -210,12 +217,12 @@ trait RequestUtils extends Logging {
     doRequest(
       (_: String, _: Option[String]) =>
         s"/${this.name}/_design/${viewName.split("/")(0)}/_view/${viewName.split("/")(1)}?$params"
-    )(body.map(_ => "POST").getOrElse("GET"), body)
+    )(body.map(_ => "POST").getOrElse("GET"), body).map(_._2)
   }
 
   protected def doRequest(
     getId: (String, Option[String]) => String
-  )(method: String, body: Option[String]): Future[String] = {
+  )(method: String, body: Option[String]): Future[(HttpResponse, String)] = {
     val url = getId(method, body)
     val m = HttpMethod.valueOf(method)
     val request = new DefaultHttpRequest(HTTP_1_1, m, url)
@@ -230,7 +237,7 @@ trait RequestUtils extends Logging {
         throw new CouchException(code.toString)
       }
 
-      Response(response).getContentString()
+      (response, Response(response).getContentString())
     }
   }
 }

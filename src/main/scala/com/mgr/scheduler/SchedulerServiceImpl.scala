@@ -13,7 +13,7 @@ class SchedulerServiceImpl(
   override val tracerFactory = config.tracerFactory
 
   def exceptions: PartialFunction[Throwable, Nothing] = {
-    case e: scheduler.SchedulerException => throw e
+    case e @ (_: scheduler.SchedulerException | _: scheduler.ValidationException) => throw e
     case e =>
       val stacktrace = e.getStackTraceString
       val message = s"Unexpected exception - ${e.toString}:${e.getMessage}\n$stacktrace"
@@ -79,10 +79,6 @@ class SchedulerServiceImpl(
     handlers.ConfigHandler.copyConfigElements(
       toConfigId, fromConfigId, elementsType
     ) handle exceptions
-  }
-
-  def importData(configId: String, data: String): Future[Unit] = {
-    handlers.ConfigHandler.importData(configId, data) handle exceptions
   }
 
   def getTasks(configIdOpt: Option[String]): Future[Seq[scheduler.TaskInfo]] = {

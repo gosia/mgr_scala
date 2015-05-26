@@ -3,6 +3,10 @@ namespace py scheduler
 
 typedef string Id
 
+exception ValidationException {
+  1: string message;
+}
+
 exception SchedulerException {
   1: string message;
 }
@@ -150,23 +154,27 @@ service SchedulerService {
     5: list<Group> groups;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   Config getConfig(
       1: Id id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   void deleteConfig(
     1: Id config_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
   
   list<ConfigBasicInfo> getConfigs(
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   void addConfigElement(
@@ -177,6 +185,7 @@ service SchedulerService {
     5: list<Group> groups;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
   
   void editConfigElement(
@@ -187,6 +196,7 @@ service SchedulerService {
     5: list<Group> groups;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
   
   void removeConfigElement(
@@ -195,6 +205,7 @@ service SchedulerService {
     3: string element_type;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   void copyConfigElements(
@@ -203,19 +214,14 @@ service SchedulerService {
     3: string elements_type;
   ) throws (
     1: SchedulerException se;
-  )
-
-  void importData(
-    1: Id config_id;
-    2: string data;
-  ) throws (
-    1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   list<TaskInfo> getTasks(
     1: optional Id config_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   Id createTask(
@@ -223,36 +229,42 @@ service SchedulerService {
     2: Algorithm algorithm;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   void startTask(
     1: Id task_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   void deleteTask(
     1: Id task_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   TaskStatus getTaskStatus(
     1: Id task_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   TaskInfo getTaskInfo(
     1: Id task_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   Timetable getTaskResult(
     1: Id task_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   Timetable addTaskEvent(
@@ -261,6 +273,7 @@ service SchedulerService {
     3: Point point;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   Timetable removeTaskEvent(
@@ -268,6 +281,7 @@ service SchedulerService {
     2: Id group_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   list<Id> getGroupBusyTerms(
@@ -275,28 +289,33 @@ service SchedulerService {
     2: Id group_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   File createFile(
     1: FileCreationInfo info;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   void deleteFile(
     1: Id file_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   File getFile(
     1: Id file_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   list<FileBasicInfo> getFiles() throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   void saveFile(
@@ -304,12 +323,14 @@ service SchedulerService {
     2: string content;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
   FileBasicInfo linkFile(
     1: Id file_id;
   ) throws (
     1: SchedulerException se;
+    2: ValidationException ve;
   )
 
 }
