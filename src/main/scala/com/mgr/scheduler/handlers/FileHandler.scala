@@ -123,4 +123,18 @@ object FileHandler extends Logging with Couch {
 
   }
 
+  def addElements(
+    fileId: String,
+    config: docs.Config,
+    teachers: Seq[docs.Teacher],
+    groups: Seq[docs.Group]
+  ): Future[Unit] = {
+    couchClient.get[docs.File](fileId) flatMap {
+      case None => throw scheduler.ValidationException(s"Plik $fileId nie istnieje")
+      case Some(file) =>
+        val newFile = file.addElements(teachers, groups, config)
+        couchClient.update[docs.File](newFile) map { _ => () }
+    }
+  }
+
 }

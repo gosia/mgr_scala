@@ -215,52 +215,59 @@ object ConfigHandler extends Logging  with Couch {
   ): Future[Unit] = {
     log.info(s"Adding elements for config $configId")
 
-    couchClient.exists(configId) map { exists =>
+    couchClient.get[docs.Config](configId) flatMap {
+      case None => throw scheduler.ValidationException(s"Przydział $configId nie istnieje")
+      case Some(config) =>
 
-      if (!exists) {
-        throw scheduler.ValidationException(s"Przydział $configId nie istnieje")
-      }
-
-      val termDocs = terms map {
-        docs.Term(configId, _)
-      }
-      val roomDocs = rooms map {
-        docs.Room(configId, _)
-      }
-      val teacherDocs = teachers map {
-        docs.Teacher(configId, _)
-      }
-      val groupDocs = groups map {
-        docs.Group(configId, _)
-      }
-
-      val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
-        case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
-      }) toSeq
-      val labelDocs = labelIds map {
-        docs.Label(configId, _)
-      }
-
-      getConfigDef(configId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
-        val valid = isValidConfig(
-          configId,
-          termDocs ++ exTerms,
-          roomDocs ++ exRooms,
-          teacherDocs ++ exTeachers,
-          groupDocs ++ exGroups,
-          labelDocs ++ exLabels
-        )
-        if (!valid._2) {
-          throw scheduler.ValidationException(s"Przydział nie jest poprawny: ${valid._1}")
+        val termDocs = terms map {
+          docs.Term(configId, _)
+        }
+        val roomDocs = rooms map {
+          docs.Room(configId, _)
+        }
+        val teacherDocs = teachers map {
+          docs.Teacher(configId, _)
+        }
+        val groupDocs = groups map {
+          docs.Group(configId, _)
         }
 
-        val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
+        val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
+          case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
+        }) toSeq
+        val labelDocs = labelIds map {
+          docs.Label(configId, _)
+        }
 
-        couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
-          CouchResponse.logErrors(rseq)
-          ()
-        } }
-      }
+        getConfigDef(configId) flatMap { case (exGroups, exTeachers, exRooms, exTerms, exLabels) =>
+          val valid = isValidConfig(
+            configId,
+            termDocs ++ exTerms,
+            roomDocs ++ exRooms,
+            teacherDocs ++ exTeachers,
+            groupDocs ++ exGroups,
+            labelDocs ++ exLabels
+          )
+          if (!valid._2) {
+            throw scheduler.ValidationException(s"Przydział nie jest poprawny: ${valid._1}")
+          }
+
+          val updateFileF: Future[Unit] = {
+            config.file match {
+              case None => Future.Unit
+              case Some(fileId) => FileHandler.addElements(fileId, config, teacherDocs, groupDocs)
+            }
+          }
+
+          updateFileF flatMap { _ =>
+            val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
+
+            couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+              CouchResponse.logErrors(rseq)
+              ()
+            } }
+          }
+        }
     }
 
   }
