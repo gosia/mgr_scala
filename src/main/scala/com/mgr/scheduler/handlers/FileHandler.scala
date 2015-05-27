@@ -3,6 +3,7 @@ package com.mgr.scheduler.handlers
 import com.twitter.util.Future
 
 import com.mgr.scheduler.Couch
+import com.mgr.scheduler.datastructures.Implicits._
 import com.mgr.scheduler.docs
 import com.mgr.scheduler.serializers
 import com.mgr.thrift.scheduler
@@ -126,13 +127,57 @@ object FileHandler extends Logging with Couch {
   def addElements(
     fileId: String,
     config: docs.Config,
-    teachers: Seq[docs.Teacher],
-    groups: Seq[docs.Group]
+    teachers: Seq[scheduler.Teacher],
+    groups: Seq[scheduler.Group]
   ): Future[Unit] = {
     couchClient.get[docs.File](fileId) flatMap {
       case None => throw scheduler.ValidationException(s"Plik $fileId nie istnieje")
-      case Some(file) =>
-        val newFile = file.addElements(teachers, groups, config)
+      case Some(doc) =>
+        val ii = serializers.Ii(fileId, doc.content)
+        val file = ii.toFileDef
+
+        val fileWithTeachers = teachers.foldLeft(file) { case (f, t) => f.addTeacher(t) }
+        val fileWithGroups = groups.foldLeft(fileWithTeachers) {
+          case (f, g) => f.addGroup(g, config)
+        }
+
+        val newContent = ii.fromLineSeq(fileWithGroups.lines)
+        val newFile = doc.copy(content = newContent)
+
+        couchClient.update[docs.File](newFile) map { _ => () }
+    }
+  }
+
+  def editElements(
+    fileId: String,
+    config: docs.Config,
+    teachers: Seq[scheduler.Teacher],
+    groups: Seq[scheduler.Group]
+  ): Future[Unit] = {
+    couchClient.get[docs.File](fileId) flatMap {
+      case None => throw scheduler.ValidationException(s"Plik $fileId nie istnieje")
+      case Some(doc) =>
+        val ii = serializers.Ii(fileId, doc.content)
+        val file = ii.toFileDef
+
+        val linesWithTeachers = teachers.foldLeft(file.lines) { case (lines, teacher) =>
+          lines.mapTeacher({ t: docs.Teacher => if (t.getRealId == teacher.id) {
+            docs.Teacher(t.config_id, teacher)
+          } else {
+            t
+          } })
+        }
+        val linesWithGroups = groups.foldLeft(linesWithTeachers) { case (lines, group) =>
+          lines.mapGroup({ g: docs.Group => if (g.getRealId == group.id) {
+            docs.Group(g.config_id, group)
+          } else {
+            g
+          } })
+        }
+
+        val newContent = ii.fromLineSeq(linesWithGroups)
+        val newFile = doc.copy(content = newContent)
+
         couchClient.update[docs.File](newFile) map { _ => () }
     }
   }

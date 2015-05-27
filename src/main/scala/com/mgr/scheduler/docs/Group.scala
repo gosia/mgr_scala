@@ -4,7 +4,8 @@ import com.mgr.thrift.scheduler
 
 final case class GroupExtra(
   course: String,
-  group_type: String
+  group_type: String,
+  notes: String = ""
 )
 
 final case class Group(
@@ -20,7 +21,7 @@ final case class Group(
   terms_num: Int,
   students_num: Int,
 
-  extra: Option[GroupExtra],
+  extra: GroupExtra,
 
   `type`: String = Group.`type`
 ) extends Base {
@@ -52,10 +53,7 @@ final case class Group(
     }
 
   def toTxt: String = {
-    extra match {
-      case None => getRealId
-      case Some(ge) => s"${ge.course} (${ge.group_type})"
-    }
+    s"${extra.course} (${extra.group_type})"
   }
 
   def asThrift: scheduler.Group = scheduler.Group(
@@ -67,10 +65,11 @@ final case class Group(
     sameTermGroups=this.same_term_groups.map(Group.getRealId),
     termsNum=this.terms_num.toShort,
     studentsNum=this.students_num.toShort,
-    extra=this.extra.map(extra => scheduler.GroupExtra(
-      course=extra.course,
-      groupType=extra.group_type
-    ))
+    extra=scheduler.GroupExtra(
+      extra.course,
+      extra.group_type,
+      extra.notes
+    )
   )
 
 }
@@ -88,6 +87,8 @@ object Group extends BaseObj {
     diff_term_groups = group.diffTermGroups map { Group.getCouchId(configId, _) },
     same_term_groups = group.sameTermGroups map { Group.getCouchId(configId, _) },
     students_num = group.studentsNum,
-    extra = group.extra.map(e => GroupExtra(course = e.course, group_type=e.groupType))
+    extra = GroupExtra(
+      course = group.extra.course, group_type=group.extra.groupType, notes=group.extra.notes
+    )
   )
 }

@@ -32,7 +32,8 @@ object TestObjects {
 
   val steacher1 = scheduler.Teacher(
     id="teacher1id",
-    terms=List(sterm1.id, sterm2.id)
+    terms=List(sterm1.id, sterm2.id),
+    extra = scheduler.TeacherExtra("", "", 0, "")
   )
   val teacher1 = docs.Teacher(configId, steacher1)
 

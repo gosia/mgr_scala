@@ -45,14 +45,23 @@ struct Room {
   4: i16 capacity;
 }
 
+struct TeacherExtra {
+  1: string first_name;
+  2: string last_name;
+  3: i16 pensum;
+  4: string notes;
+}
+
 struct Teacher {
   1: Id id;
   2: list<string> terms;
+  3: TeacherExtra extra;
 }
 
 struct GroupExtra {
   1: string course;
   2: string group_type;
+  3: string notes;
 }
 
 struct Group {
@@ -64,7 +73,7 @@ struct Group {
   6: list<string> same_term_groups;
   7: i16 terms_num;
   8: i16 students_num;
-  9: optional GroupExtra extra;
+  9: GroupExtra extra;
 }
 
 struct ConfigCreationInfo {

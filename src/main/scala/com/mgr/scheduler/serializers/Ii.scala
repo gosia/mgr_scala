@@ -1,6 +1,7 @@
 package com.mgr.scheduler.serializers
 
 import com.mgr.scheduler.datastructures
+import com.mgr.scheduler.datastructures.Implicits._
 import com.mgr.scheduler.docs
 
 case class Ii(fileId: String, data: String) extends Base {
@@ -23,22 +24,21 @@ case class Ii(fileId: String, data: String) extends Base {
   )
   val allTermIds = allTerms mapValues { _.map(_._id) }
 
-  private def getTeacherDocs(lines: Seq[String], configId: String): Seq[docs.Teacher] = {
-    lines map { line =>
-      val parts = line.split("\\|")
-      val id = parts(1)
+  private def getTeacherDoc(line: String, configId: String): docs.Teacher = {
+    val parts = line.split("\\|", -1)
+    val id = parts(1)
 
-      // TODO(gosia): use those data
-      // val firstName = parts(2)
-      // val lastName = parts(4)
-      // val pensum = parts(5)
+    val firstName = parts(2)
+    val lastName = parts(4)
+    val pensum = parts(5)
+    val notes = parts(6)
 
-      docs.Teacher(
-        _id = docs.Teacher.getCouchId(configId, id),
-        config_id = configId,
-        terms = allTermIds(configId)
-      )
-    }
+    docs.Teacher(
+      _id = docs.Teacher.getCouchId(configId, id),
+      config_id = configId,
+      terms = allTermIds(configId),
+      extra = docs.TeacherExtra(firstName, lastName, pensum.toInt, notes)
+    )
   }
 
   private def defaultRooms: Seq[String] = Seq(
@@ -66,7 +66,7 @@ case class Ii(fileId: String, data: String) extends Base {
 
   private def getRoomDocs(configId: String): Seq[docs.Room] = {
     defaultRooms map { room =>
-      val parts = room.split("\\|")
+      val parts = room.split("\\|", -1)
       val id = parts(1)
       val capacity = parts(2)
       val labels = parts(3).split(",")
@@ -83,7 +83,7 @@ case class Ii(fileId: String, data: String) extends Base {
 
   private def getLabelDocs(configId: String): Seq[docs.Label] = {
     defaultRooms map { room =>
-      val parts = room.split("\\|")
+      val parts = room.split("\\|", -1)
       val labels = parts(3).split(",")
 
       labels map { label =>
@@ -156,7 +156,7 @@ case class Ii(fileId: String, data: String) extends Base {
         terms = allTermIds(configId),
         terms_num = hours.toInt,
         students_num = 15,
-        extra = Some(docs.GroupExtra(course = courseName, group_type = groupType))
+        extra = docs.GroupExtra(course = courseName, group_type = groupType)
       )
     }
 
@@ -164,7 +164,7 @@ case class Ii(fileId: String, data: String) extends Base {
 
   private def normalizeGroupLines(lines: Seq[String]): Seq[(Seq[String], Int)] = {
     val splittedLines = lines map { line =>
-      val parts = line.split("\\|").toSeq
+      val parts = line.split("\\|", -1).toSeq
       parts.length match {
         case 6 => parts ++ Seq("")
         case _ => parts
@@ -173,41 +173,76 @@ case class Ii(fileId: String, data: String) extends Base {
     splittedLines.zipWithIndex
   }
 
-  def toFileDef: datastructures.File = {
-    val lines = data.split("\n")
-    val tLines = lines filter { x => x.startsWith("o|")}
+  def toLineSeq: Seq[datastructures.Line] = {
+    val lines = data.split("\n", -1)
     val s1Lines = lines filter { x => x.startsWith("1|")}
     val s2Lines = lines filter { x => x.startsWith("2|")}
-
-    val teachers1: Seq[docs.Teacher] = getTeacherDocs(tLines, configId1)
-    val rooms1: Seq[docs.Room] = getRoomDocs(configId1)
-    val labels1: Seq[docs.Label] = getLabelDocs(configId1)
-
-    val teachers2: Seq[docs.Teacher] = getTeacherDocs(tLines, configId2)
-    val rooms2: Seq[docs.Room] = getRoomDocs(configId2)
-    val labels2: Seq[docs.Label] = getLabelDocs(configId2)
 
     val groups1 = getGroupDocs(s1Lines, configId1)
     val groups2 = getGroupDocs(s2Lines, configId2)
 
+    lines.foldLeft((groups1, groups2, Seq[datastructures.Line]())) {
+      case ((g1, g2, result), line) => line match {
+        case l if line.startsWith("o|") => (g1, g2, result :+ datastructures.TeacherLine(
+          getTeacherDoc(line, configId1),
+          getTeacherDoc(line, configId2)
+        ))
+        case l if line.startsWith("1|") =>
+          (g1.tail, g2, result :+ datastructures.GroupLine(g1.head, "winter"))
+        case l if line.startsWith("2|") =>
+          (g1, g2.tail, result :+ datastructures.GroupLine(g2.head, "summer"))
+        case l => (g1, g2, result :+ datastructures.EmptyLine(line))
+    } } _3
+  }
+
+  def toFileDef: datastructures.File = {
+    val linesSeq = toLineSeq
+
+    val rooms1: Seq[docs.Room] = getRoomDocs(configId1)
+    val labels1: Seq[docs.Label] = getLabelDocs(configId1)
+    val rooms2: Seq[docs.Room] = getRoomDocs(configId2)
+    val labels2: Seq[docs.Label] = getLabelDocs(configId2)
+
     val config1 = datastructures.Config(
-      teachers = teachers1,
+      teachers = linesSeq.teachers1,
       labels = labels1,
-      groups = groups1,
+      groups = linesSeq.groups1,
       terms = allTerms(configId1),
       rooms = rooms1,
       configId = configId1
     )
     val config2 = datastructures.Config(
-      teachers = teachers2,
+      teachers = linesSeq.teachers2,
       labels = labels2,
-      groups = groups2,
+      groups = linesSeq.groups2,
       terms = allTerms(configId2),
       rooms = rooms2,
       configId = configId2
     )
 
-    datastructures.File(fileId, config1, config2)
+    datastructures.File(fileId, config1, config2, linesSeq)
 
   }
+
+  def fromLine(line: datastructures.Line): String = {
+    line match {
+      case datastructures.EmptyLine(l) => l
+      case datastructures.TeacherLine(t, _) =>
+        val firstLetter = t.extra.first_name.headOption.map(_.toUpper).getOrElse("")
+        s"o|${t.getRealId}|${t.extra.first_name}|$firstLetter|${t.extra.last_name}|" +
+        s"${t.extra.pensum}|${t.extra.notes}"
+      case datastructures.GroupLine(g, term) =>
+        val termNum = term match {
+          case "winter" => 1
+          case _ => 2
+        }
+        val course = g.extra.course
+        val groupType = g.extra.group_type
+        val notes = g.extra.notes
+        val teachers = g.teachers.map(docs.Teacher.getRealId).mkString(",")
+        val hours = g.terms_num
+        s"$termNum|0|$course|$groupType|$hours|$teachers|$notes"
+    }
+  }
+
 }
