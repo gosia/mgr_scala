@@ -1,12 +1,57 @@
 package com.mgr.scheduler.datastructures
 
+import com.mgr.scheduler.datastructures
 import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler
 
-sealed trait Line
-case class EmptyLine(line: String) extends Line
-case class TeacherLine(doc1: docs.Teacher, doc2: docs.Teacher) extends Line
-case class GroupLine(doc: docs.Group, term: String) extends Line
+sealed trait Line {
+  def setChanges(line: String): Line
+}
+case class EmptyLine(line: String) extends Line {
+  def setChanges(line: String): Line = EmptyLine(line)
+}
+case class TeacherLine(doc1: docs.Teacher, doc2: docs.Teacher) extends Line {
+  def setChanges(line: String): Line = {
+    val parts = line.split("\\|", -1)
+    val id = parts(1)
+
+    val firstName = parts(2)
+    val lastName = parts(4)
+    val pensum = parts(5)
+    val notes = parts(6)
+
+    val t1 = docs.Teacher(
+      _id = docs.Teacher.getCouchId(doc1.config_id, id),
+      config_id = doc1.config_id,
+      terms = doc1.terms,
+      extra = docs.TeacherExtra(firstName, lastName, pensum.toInt, notes)
+    )
+
+    val t2 = docs.Teacher(
+      _id = docs.Teacher.getCouchId(doc2.config_id, id),
+      config_id = doc2.config_id,
+      terms = doc2.terms,
+      extra = docs.TeacherExtra(firstName, lastName, pensum.toInt, notes)
+    )
+    TeacherLine(t1, t2)
+  }
+}
+case class GroupLine(doc: docs.Group, term: String) extends Line {
+  def setChanges(line: String): Line = {
+    val p = line.split("\\|", -1)
+    val (courseName, groupType, hours, teacherIds, notes) = (p(2), p(3), p(4), p(5), p(6))
+    val group = doc.copy(
+      teachers = teacherIds.split(",").map(docs.Teacher.getCouchId(doc.config_id, _)),
+      terms_num = hours.toInt,
+      extra = docs.GroupExtra(course = courseName, group_type = groupType, notes = notes)
+    )
+    val term = p(0) match {
+      case "1" => "winter"
+      case _ => "summer"
+    }
+    GroupLine(group, term)
+  }
+}
 
 class LineSeq(xs: Seq[Line]) {
   def mapTeacher(f: docs.Teacher => docs.Teacher): Seq[Line] = xs map {
@@ -60,6 +105,29 @@ class LineSeq(xs: Seq[Line]) {
       case _ => None
     }
   } flatten
+}
+
+trait Linear {
+  def toLine(fileId: String, text: String): Line
+  def toLineDb(
+    fileId: String, text: String,
+    groups1Map: Map[String, docs.Group], teachers1Map: Map[String, docs.Teacher],
+    groups2Map: Map[String, docs.Group], teachers2Map: Map[String, docs.Teacher]
+  ): Line
+  def fromLine(line: Line): String
+
+  def toLineSeq(fileId: String, text: String): Seq[datastructures.Line] =
+    text.split("\n", -1) map { toLine(fileId, _) }
+
+  def toLineSeqDb(
+    fileId: String, text: String,
+    groups1Map: Map[String, docs.Group], teachers1Map: Map[String, docs.Teacher],
+    groups2Map: Map[String, docs.Group], teachers2Map: Map[String, docs.Teacher]
+  ): Seq[datastructures.Line] = text.split("\n", -1) map {
+    toLineDb(fileId, _, groups1Map, teachers1Map, groups2Map, teachers2Map)
+  }
+
+  def fromLineSeq(lines: Seq[Line]): String = lines map fromLine mkString "\n"
 }
 
 object Implicits {

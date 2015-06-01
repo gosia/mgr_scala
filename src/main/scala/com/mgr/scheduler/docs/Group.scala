@@ -5,7 +5,7 @@ import com.mgr.thrift.scheduler
 final case class GroupExtra(
   course: String,
   group_type: String,
-  notes: String = ""
+  notes: String
 )
 
 final case class Group(

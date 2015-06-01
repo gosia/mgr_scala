@@ -54,4 +54,62 @@ case class File(
     }
     (err, valid1._2 && valid2._2)
   }
+
+  def setNew(file: File): File = {
+    val oldTeachers1 = config1.teachers
+    val oldTeachers1Map = oldTeachers1.map(x => (x._id, x)).toMap
+    val newTeachers1 = file.config1.teachers
+
+    val teachers1 = newTeachers1.map { t =>
+      oldTeachers1Map.get(t._id) match {
+        case None => t
+        case Some(oldt) => oldt.copy(extra=t.extra)
+      }
+    }
+
+    val oldTeachers2 = config2.teachers
+    val oldTeachers2Map = oldTeachers2.map(x => (x._id, x)).toMap
+    val newTeachers2 = file.config2.teachers
+
+    val teachers2 = newTeachers2.map { t =>
+      oldTeachers2Map.get(t._id) match {
+        case None => t
+        case Some(oldt) => oldt.copy(extra=t.extra)
+      }
+    }
+
+    val oldGroups1 = config1.groups
+    val oldGroups1Map = oldGroups1.map(x => (x._id, x)).toMap
+    val newGroups1 = file.config1.groups
+
+    val groups1 = newGroups1.map { g =>
+      oldGroups1Map.get(g._id) match {
+        case None => g
+        case Some(oldg) => oldg.copy(extra=g.extra, terms_num=g.terms_num, teachers=g.teachers)
+      }
+    }
+
+    val oldGroups2 = config2.groups
+    val oldGroups2Map = oldGroups2.map(x => (x._id, x)).toMap
+    val newGroups2 = file.config2.groups
+
+    val groups2 = newGroups2.map { g =>
+      oldGroups2Map.get(g._id) match {
+        case None => g
+        case Some(oldg) => oldg.copy(extra=g.extra, terms_num=g.terms_num, teachers=g.teachers)
+      }
+    }
+
+    val groupsMap = groups1.map(x => (x._id, x)).toMap ++ groups2.map(x => (x._id, x)).toMap
+    val teachersMap = teachers1.map(x => (x._id, x)).toMap ++ teachers2.map(x => (x._id, x)).toMap
+
+    val newConfig1 = config1.copy(teachers=teachers1, groups=groups1)
+    val newConfig2 = config2.copy(teachers=teachers2, groups=groups2)
+
+    val newLines = file.lines
+      .mapGroup({ g => groupsMap(g._id)})
+      .mapTeacher({ t => teachersMap(t._id)})
+
+    File(id, newConfig1, newConfig2, newLines)
+  }
 }

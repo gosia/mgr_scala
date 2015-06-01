@@ -25,11 +25,27 @@ object ConfigHandler extends Logging  with Couch {
     val labelIds = labels map { _._id } toSet
     val teacherIds = teachers map { _._id } toSet
 
+    def validateUniqIds(xs: Seq[String]): (Option[String], Boolean) = {
+      val duplicates: Seq[String] =
+        xs.groupBy(identity).collect { case (x, ys) if ys.size > 1 => x } toSeq
+
+      duplicates match {
+        case Seq() => (None, true)
+        case _ => (Some(s"Id grup (${duplicates.mkString(", ")}) nie są unikalne"), false)
+      }
+    }
+
     val validated: Seq[(Option[String], Boolean)] =
       terms.map(_.isValid) ++
       rooms.map(_.isValid(termIds, labelIds)) ++
       teachers.map(_.isValid(termIds)) ++
-      groups.map(_.isValid(termIds, labelIds, groupIds, teacherIds))
+      groups.map(_.isValid(termIds, labelIds, groupIds, teacherIds)) ++
+      Seq(
+        validateUniqIds(groups.map(_._id)),
+        validateUniqIds(teachers.map(_._id)),
+        validateUniqIds(rooms.map(_._id)),
+        validateUniqIds(terms.map(_._id))
+      )
 
     val validationResult = validated.foldLeft[(Option[String], Boolean)]((None, true))({
       case (x, r) => if (x._2) {
@@ -259,8 +275,33 @@ object ConfigHandler extends Logging  with Couch {
             }
           }
 
+          val otherDocs = {
+            config.file match {
+              case None => Seq()
+              case Some(fileId) =>
+                // TODO(gosia): add validation?
+                // TODO(gosia): add labels?
+                val otherConfigId = {
+                  configId match {
+                    case c if configId.endsWith("-1") => s"$fileId-2"
+                    case _ => s"$fileId-1"
+                  }
+                }
+                val otherTermDocs = terms map {
+                  docs.Term(otherConfigId, _)
+                }
+                val otherRoomDocs = rooms map {
+                  docs.Room(otherConfigId, _)
+                }
+                val otherTeacherDocs = teachers map {
+                  docs.Teacher(otherConfigId, _)
+                }
+                otherTermDocs ++ otherRoomDocs ++ otherTeacherDocs
+            }
+          }
+
           updateFileF flatMap { _ =>
-            val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
+            val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs ++ otherDocs
 
             couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
               CouchResponse.logErrors(rseq)
@@ -340,6 +381,8 @@ object ConfigHandler extends Logging  with Couch {
               case Some(fileId) => FileHandler.editElements(fileId, config, teachers, groups)
             }
           }
+
+          // TODO(gosia): edit second config
 
           val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
 
