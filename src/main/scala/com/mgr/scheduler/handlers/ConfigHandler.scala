@@ -382,15 +382,73 @@ object ConfigHandler extends Logging  with Couch {
             }
           }
 
-          // TODO(gosia): edit second config
-
-          val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
+          val otherDocsF = {
+            config.file match {
+              case None => Future.value(Seq())
+              case Some(fileId) =>
+                val otherConfigId = {
+                  configId match {
+                    case c if configId.endsWith("-1") => s"$fileId-2"
+                    case _ => s"$fileId-1"
+                  }
+                }
+                val otherTermDocsF: Future[Seq[docs.Term]] = Future.collect {
+                  terms map { x =>
+                    val id = docs.Term.getCouchId(otherConfigId, x.id)
+                    couchClient.get[docs.Term](id) map {
+                      case None => throw scheduler.SchedulerException("sth is wrong")
+                      case Some(doc) =>
+                        docs.Term(otherConfigId, x).copy(
+                          _rev = doc._rev
+                        )
+                    }
+                  }
+                }
+                val otherRoomDocsF: Future[Seq[docs.Room]] = Future.collect {
+                  rooms map { x =>
+                    val id = docs.Room.getCouchId(otherConfigId, x.id)
+                    couchClient.get[docs.Room](id) map {
+                      case None => throw scheduler.SchedulerException("sth is wrong")
+                      case Some(doc) =>
+                        docs.Room(otherConfigId, x).copy(
+                          _rev = doc._rev,
+                          terms = doc.terms
+                        )
+                    }
+                  }
+                }
+                val otherTeacherDocsF: Future[Seq[docs.Teacher]] = Future.collect {
+                  teachers map { x =>
+                    val id = docs.Teacher.getCouchId(otherConfigId, x.id)
+                    couchClient.get[docs.Teacher](id) map {
+                      case None => throw scheduler.SchedulerException("sth is wrong")
+                      case Some(doc) =>
+                        docs.Teacher(otherConfigId, x).copy(
+                          _rev = doc._rev,
+                          terms = doc.terms
+                        )
+                    }
+                  }
+                }
+                otherTermDocsF flatMap { otherTermsDocs =>
+                  otherRoomDocsF flatMap { otherRoomDocs =>
+                    otherTeacherDocsF map { otherTeacherDocs =>
+                      otherTermsDocs ++ otherRoomDocs ++ otherTeacherDocs
+                    }
+                  }
+                }
+            }
+          }
 
           updateFileF flatMap { _ =>
-            couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
-              CouchResponse.logErrors(rseq)
-              ()
-            } }
+            otherDocsF flatMap { otherDocs =>
+              val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs ++ otherDocs
+
+              couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+                CouchResponse.logErrors(rseq)
+                ()
+              } }
+            }
           }
         }
     }
