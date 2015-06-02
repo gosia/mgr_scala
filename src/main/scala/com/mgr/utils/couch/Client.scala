@@ -232,11 +232,6 @@ trait RequestUtils extends Logging {
     UtilFuns.retry[HttpResponse, ConnectionClosedException] (3) {
       sendRequest(request)
     } map { response: HttpResponse =>
-      val code = response.getStatus.getCode
-      if (!List(200, 201, 202).contains(code)) {
-        throw new CouchException(code.toString)
-      }
-
       (response, Response(response).getContentString())
     }
   }

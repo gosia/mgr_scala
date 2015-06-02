@@ -40,8 +40,13 @@ object TaskHandler extends Logging with Couch {
 
   def createTask(configId: String, algorithm: scheduler.Algorithm): Future[String] = {
     log.info(s"Creating new task for config $configId and algorithm ${algorithm.name}")
-    val doc = docs.Task(configId, algorithm)
-    couchClient.add(doc) map { _ => doc._id}
+
+    couchClient.exists(configId) flatMap {
+      case false => throw scheduler.ValidationException(s"Przydział $configId nie istnieje")
+      case true =>
+        val doc = docs.Task(configId, algorithm)
+        couchClient.add(doc) map { _ => doc._id}
+    }
   }
 
   def startTask(taskId: String): Future[Unit] = {
