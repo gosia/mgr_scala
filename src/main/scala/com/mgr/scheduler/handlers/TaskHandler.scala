@@ -18,13 +18,8 @@ object TaskHandler extends Logging with Couch {
     couchClient.get[docs.Task](taskId) flatMap {
       case None => throw scheduler.ValidationException(s"Zadanie $taskId nie istnieje")
       case Some(doc) =>
-        if (doc.status != scheduler.TaskStatus.Finished.name.toLowerCase) {
-          throw scheduler.ValidationException(s"Zadanie jeszcze nie jest skończone")
-        }
 
-        val timetable: Seq[docs.GroupRoomTerm] = doc.timetable getOrElse(
-          throw scheduler.SchedulerException("Brak planu zajęć w dokumencie")
-        )
+        val timetable: Seq[docs.GroupRoomTerm] = doc.timetable getOrElse Seq()
 
         docs.GroupRoomTerm.toThriftString(doc.config_id, timetable) map { timetablestr: String =>
           scheduler.Timetable(
