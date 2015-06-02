@@ -11,6 +11,11 @@ exception SchedulerException {
   1: string message;
 }
 
+enum TermType {
+  WINTER,
+  SUMMER
+}
+
 enum Day {
   MON,
   TUE,
@@ -79,13 +84,13 @@ struct Group {
 struct ConfigCreationInfo {
   1: Id id;
   2: i16 year;
-  3: string term;
+  3: TermType term;
 }
 
 struct ConfigBasicInfo {
   1: Id id;
   2: i16 year;
-  3: string term;
+  3: TermType term;
   4: optional Id file;
 }
 

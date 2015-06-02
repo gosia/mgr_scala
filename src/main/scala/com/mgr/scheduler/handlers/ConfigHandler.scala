@@ -84,7 +84,7 @@ object ConfigHandler extends Logging  with Couch {
       val roomDocs = rooms map { docs.Room(id, _) }
       val teacherDocs = teachers map { docs.Teacher(id, _) }
       val groupDocs = groups map { docs.Group(id, _) }
-      val configDoc = docs.Config(_id=id, year=info.year, term=info.term)
+      val configDoc = docs.Config(_id=id, year=info.year, term=info.term.name.toLowerCase)
 
       val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
         case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
@@ -183,7 +183,10 @@ object ConfigHandler extends Logging  with Couch {
       case Some(config) =>
         getConfigDef(configId) map { case (groups, teachers, rooms, terms, labels) =>
           scheduler.Config(
-            scheduler.ConfigBasicInfo(configId, config.year.toShort, config.term, config.file),
+            scheduler.ConfigBasicInfo(
+              configId, config.year.toShort, scheduler.TermType.valueOf(config.term).get,
+              config.file
+            ),
             terms.map(_.asThrift),
             rooms.map(_.asThrift),
             teachers.map(_.asThrift),
@@ -218,7 +221,9 @@ object ConfigHandler extends Logging  with Couch {
       .includeDocs
 
     configsQuery.execute map { result: ViewResult => result mapDocs {
-      doc: docs.Config => scheduler.ConfigBasicInfo(doc._id, doc.year.toShort, doc.term, doc.file)
+      doc: docs.Config => scheduler.ConfigBasicInfo(
+        doc._id, doc.year.toShort, scheduler.TermType.valueOf(doc.term).get, doc.file
+      )
     }}
   }
 
