@@ -60,6 +60,12 @@ class LineSeq(xs: Seq[Line]) {
     case GroupLine(doc, term) => GroupLine(doc, term)
   }
 
+  def mapGroup(f: docs.Group => docs.Group): Seq[Line] = xs map {
+    case EmptyLine(l) => EmptyLine(l)
+    case TeacherLine(doc1, doc2) => TeacherLine(doc1, doc2)
+    case GroupLine(doc, term) => GroupLine(f(doc), term)
+  }
+
   def addTeacher(teacher: scheduler.Teacher, config1: String, config2: String): Seq[Line] = {
     val doc1 = docs.Teacher(config1, teacher)
     val doc2 = docs.Teacher(config2, teacher)
@@ -71,11 +77,18 @@ class LineSeq(xs: Seq[Line]) {
     xs :+ GroupLine(doc, config.term)
   }
 
-
-  def mapGroup(f: docs.Group => docs.Group): Seq[Line] = xs map {
-    case EmptyLine(l) => EmptyLine(l)
-    case TeacherLine(doc1, doc2) => TeacherLine(doc1, doc2)
-    case GroupLine(doc, term) => GroupLine(f(doc), term)
+  def removeElement(elementId: String, elementType: String) = {
+    xs filterNot {
+      case EmptyLine(l) => false
+      case TeacherLine(doc1, doc2) => elementType match {
+        case "teacher" => doc1.getRealId == elementId || doc2.getRealId == elementId
+        case _ => false
+      }
+      case GroupLine(doc, _) => elementType match {
+        case "group" => doc.getRealId == elementId
+        case _ => false
+      }
+    }
   }
 
   def teachers1: Seq[docs.Teacher] = xs map {

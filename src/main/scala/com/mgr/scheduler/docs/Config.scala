@@ -12,4 +12,10 @@ final case class Config(
   file: Option[String] = None,
 
   `type`: String = "config"
-) extends couch.Document
+) extends couch.Document {
+
+  def theOtherConfigId: Option[String] = {
+    file map { fileId => if (_id.endsWith("-1")) { s"$fileId-2" } else { s"$fileId-1" } }
+  }
+
+}

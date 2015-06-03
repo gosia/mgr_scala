@@ -31,7 +31,7 @@ object ConfigHandler extends Logging  with Couch {
 
       duplicates match {
         case Seq() => (None, true)
-        case _ => (Some(s"Id grup (${duplicates.mkString(", ")}) nie są unikalne"), false)
+        case _ => (Some(s"Id ${duplicates.mkString(", ")} nie są unikalne"), false)
       }
     }
 
@@ -273,112 +273,15 @@ object ConfigHandler extends Logging  with Couch {
             throw scheduler.ValidationException(s"Przydział nie jest poprawny: ${valid._1}")
           }
 
-          val updateFileF: Future[Unit] = {
-            config.file match {
-              case None => Future.Unit
-              case Some(fileId) => FileHandler.addElements(fileId, config, teachers, groups)
-            }
-          }
+          val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
 
-          val otherDocs = {
-            config.file match {
-              case None => Seq()
-              case Some(fileId) =>
-                // TODO(gosia): add validation?
-                // TODO(gosia): add labels?
-                val otherConfigId = {
-                  configId match {
-                    case c if configId.endsWith("-1") => s"$fileId-2"
-                    case _ => s"$fileId-1"
-                  }
-                }
-                val otherTermDocs = terms map {
-                  docs.Term(otherConfigId, _)
-                }
-                val otherRoomDocs = rooms map {
-                  docs.Room(otherConfigId, _)
-                }
-                val otherTeacherDocs = teachers map {
-                  docs.Teacher(otherConfigId, _)
-                }
-                otherTermDocs ++ otherRoomDocs ++ otherTeacherDocs
-            }
-          }
-
-          updateFileF flatMap { _ =>
-            val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs ++ otherDocs
-
-            couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
-              CouchResponse.logErrors(rseq)
-              ()
-            } }
-          }
+          couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+            CouchResponse.logErrors(rseq)
+            ()
+          } }
         }
     }
 
-  }
-
-  private def editSecondConfigElement(
-    config: docs.Config,
-    terms: Seq[scheduler.Term],
-    rooms: Seq[scheduler.Room],
-    teachers: Seq[scheduler.Teacher]
-  ) = {
-    config.file match {
-      case None => Future.value(Seq())
-      case Some(fileId) =>
-        val otherConfigId = {
-          config._id match {
-            case c if config._id.endsWith("-1") => s"$fileId-2"
-            case _ => s"$fileId-1"
-          }
-        }
-        val otherTermDocsF: Future[Seq[docs.Term]] = Future.collect {
-          terms map { x =>
-            val id = docs.Term.getCouchId(otherConfigId, x.id)
-            couchClient.get[docs.Term](id) map {
-              case None => throw scheduler.SchedulerException("sth is wrong")
-              case Some(doc) =>
-                docs.Term(otherConfigId, x).copy(
-                  _rev = doc._rev
-                )
-            }
-          }
-        }
-        val otherRoomDocsF: Future[Seq[docs.Room]] = Future.collect {
-          rooms map { x =>
-            val id = docs.Room.getCouchId(otherConfigId, x.id)
-            couchClient.get[docs.Room](id) map {
-              case None => throw scheduler.SchedulerException("sth is wrong")
-              case Some(doc) =>
-                docs.Room(otherConfigId, x).copy(
-                  _rev = doc._rev,
-                  terms = doc.terms
-                )
-            }
-          }
-        }
-        val otherTeacherDocsF: Future[Seq[docs.Teacher]] = Future.collect {
-          teachers map { x =>
-            val id = docs.Teacher.getCouchId(otherConfigId, x.id)
-            couchClient.get[docs.Teacher](id) map {
-              case None => throw scheduler.SchedulerException("sth is wrong")
-              case Some(doc) =>
-                docs.Teacher(otherConfigId, x).copy(
-                  _rev = doc._rev,
-                  terms = doc.terms
-                )
-            }
-          }
-        }
-        otherTermDocsF flatMap { otherTermsDocs =>
-          otherRoomDocsF flatMap { otherRoomDocs =>
-            otherTeacherDocsF map { otherTeacherDocs =>
-              otherTermsDocs ++ otherRoomDocs ++ otherTeacherDocs
-            }
-          }
-        }
-    }
   }
 
   def editConfigElement(
@@ -443,24 +346,12 @@ object ConfigHandler extends Logging  with Couch {
             throw scheduler.ValidationException(s"Przydział nie jest poprawny: ${valid._1}")
           }
 
-          val updateFileF: Future[Unit] = {
-            config.file match {
-              case None => Future.Unit
-              case Some(fileId) => FileHandler.editElements(fileId, config, teachers, groups)
-            }
-          }
+          val allDocs = termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs
 
-          updateFileF flatMap { _ =>
-            editSecondConfigElement(config, terms, rooms, teachers) flatMap { otherDocs =>
-              val allDocs =
-                termDocs ++ roomDocs ++ teacherDocs ++ groupDocs ++ labelDocs ++ otherDocs
-
-              couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
-                CouchResponse.logErrors(rseq)
-                ()
-              } }
-            }
-          }
+          couchClient.bulkAdd(allDocs).map { rseq: Seq[CouchResponse] => {
+            CouchResponse.logErrors(rseq)
+            ()
+          } }
         }
     }
   }

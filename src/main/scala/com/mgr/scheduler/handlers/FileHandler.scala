@@ -222,4 +222,23 @@ object FileHandler extends Logging with Couch {
     }
   }
 
+  def removeElement(fileId: String, elementId: String, elementType: String): Future[Unit] = {
+    couchClient.get[docs.File](fileId) flatMap {
+      case None => throw scheduler.ValidationException(s"Plik $fileId nie istnieje")
+      case Some(file) =>
+        elementType match {
+          case e if e == "group" || e == "teacher" =>
+            val IiLinearO = new serializers.IiLinear {}
+            val lineSeq = IiLinearO.toLineSeq(fileId, file.content)
+            val newLineSeq = lineSeq.removeElement(elementId, elementType)
+            val newContent = IiLinearO.fromLineSeq(newLineSeq)
+            val newFile = file.copy(content = newContent)
+
+            couchClient.update[docs.File](newFile) map { _ => () }
+
+          case e if e == "room" || e == "term" => Future.Unit
+        }
+    }
+  }
+
 }
