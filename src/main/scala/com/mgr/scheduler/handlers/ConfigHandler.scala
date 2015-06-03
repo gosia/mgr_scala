@@ -465,6 +465,91 @@ object ConfigHandler extends Logging  with Couch {
     }
   }
 
+  def removeTeacherRelatedObjects(
+    configId: String, elementId: String
+  ): Future[Unit] = {
+
+    val groupsQ = couchClient.view("groups/related_by_teacher")
+      .startkey(Seq(configId, elementId))
+      .endkey(Seq(configId, elementId))
+      .includeDocs
+
+    groupsQ.execute flatMap { viewResults: ViewResult =>
+      val groups = viewResults.docs[docs.Group]
+
+      val newGroups = groups.map({ group =>
+        group.copy(teachers = group.teachers.filter(_ != elementId))
+      })
+
+      couchClient.bulkAdd(newGroups) map { _ => () }
+    }
+  }
+
+  def removeGroupRelatedObjects(
+    configId: String, elementId: String
+  ): Future[Unit] = {
+
+    val groupsQ = couchClient.view("groups/related_by_group")
+      .startkey(Seq(configId, elementId))
+      .endkey(Seq(configId, elementId))
+      .includeDocs
+
+    groupsQ.execute flatMap { viewResults: ViewResult =>
+      val groups = viewResults.docs[docs.Group]
+
+      val newGroups = groups.map({ group => group.copy(
+        same_term_groups = group.same_term_groups.filter(_ != elementId),
+        diff_term_groups = group.diff_term_groups.filter(_ != elementId)
+      )})
+
+      couchClient.bulkAdd(newGroups) map { _ => () }
+    }
+  }
+
+  def removeTermRelatedObjects(
+    configId: String, elementId: String
+  ): Future[Unit] = {
+
+    val groupsQ = couchClient.view("groups/related_by_term")
+      .startkey(Seq(configId, elementId))
+      .endkey(Seq(configId, elementId))
+      .includeDocs
+
+    val roomsQ = couchClient.view("rooms/related_by_term")
+      .startkey(Seq(configId, elementId))
+      .endkey(Seq(configId, elementId))
+      .includeDocs
+
+    val teachersQ = couchClient.view("teachers/related_by_term")
+      .startkey(Seq(configId, elementId))
+      .endkey(Seq(configId, elementId))
+      .includeDocs
+
+    val groupsF = groupsQ.execute map { viewResults: ViewResult =>
+      val xs = viewResults.docs[docs.Group]
+      xs.map({ x => x.copy(terms = x.terms.filter(_ != elementId))})
+    }
+
+    val roomsF = roomsQ.execute map { viewResults: ViewResult =>
+      val xs = viewResults.docs[docs.Room]
+      xs.map({ x => x.copy(terms = x.terms.filter(_ != elementId))})
+    }
+
+    val teachersF = teachersQ.execute map { viewResults: ViewResult =>
+      val xs = viewResults.docs[docs.Teacher]
+      xs.map({ x => x.copy(terms = x.terms.filter(_ != elementId))})
+    }
+
+    groupsF flatMap { newGroups =>
+      roomsF flatMap { newRooms =>
+        teachersF flatMap { newTeachers =>
+          couchClient.bulkAdd(newTeachers ++ newRooms ++ newGroups) map { _ => () }
+        }
+      }
+    }
+
+  }
+
   def removeConfigElement(
     configId: String, elementId: String, elementType: String
   ): Future[Unit] = {
@@ -476,13 +561,22 @@ object ConfigHandler extends Logging  with Couch {
       "room" -> docs.Room,
       "teacher" -> docs.Teacher
     )
+    val relatedFMap: Map[String, (String, String) => Future[Unit]] = Map(
+      "group" -> removeGroupRelatedObjects,
+      "term" -> removeTermRelatedObjects,
+      "room" -> ((configId: String, elementId: String) => Future.Unit),
+      "teacher" -> removeTeacherRelatedObjects
+    )
     val cls = clsMap.getOrElse(
       elementType, throw scheduler.ValidationException(s"Niepoprawny typ elementu $elementType")
     )
 
     couchClient.get[docs.BaseDoc](cls.getCouchId(configId, elementId)) flatMap {
       case None => throw scheduler.ValidationException(s"Element $elementId nie istnieje")
-      case Some(doc) => couchClient.delete[docs.BaseDoc](doc) map { _ => () }
+      case Some(doc) =>
+        relatedFMap(elementType)(configId, doc._id) flatMap { _ =>
+          couchClient.delete[docs.BaseDoc](doc) map { _ => () }
+        }
     }
   }
 

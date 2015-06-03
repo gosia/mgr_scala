@@ -135,7 +135,9 @@ case class ViewQueryBuilder(
       .values.asInstanceOf[Map[String, AnyRef]]
 
     queryMap
-      .filterKeys(!Set("keys", "host", "port", "name", "viewName").contains(_))
+      .filterKeys(
+        !Set("keys", "host", "port", "name", "viewName", "timeout", "tcpTimeout").contains(_)
+      )
       .filter({
         case (k, None) => false
         case (k, v) => true

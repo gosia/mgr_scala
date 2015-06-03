@@ -47,8 +47,6 @@ object CouchResponse extends Logging {
   }
 }
 
-final case class CouchException(m: String) extends Exception
-
 case class CouchResult[T <: Document](response: CouchResponse, doc: T)
 
 case class DocInfo(_id: String, _rev: Option[String], `type`: String = "") extends Document
