@@ -77,7 +77,7 @@ class LineSeq(xs: Seq[Line]) {
     xs :+ GroupLine(doc, config.term)
   }
 
-  def removeElement(elementId: String, elementType: String) = {
+  def removeElement(elementId: String, elementType: String): Seq[Line] = {
     xs filterNot {
       case EmptyLine(l) => false
       case TeacherLine(doc1, doc2) => elementType match {
