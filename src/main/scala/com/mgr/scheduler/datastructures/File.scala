@@ -55,6 +55,26 @@ case class File(
     (err, valid1._2 && valid2._2)
   }
 
+  def getNewDeleted(file: File): Seq[docs.Base with Product with Serializable] = {
+    val oldTeachers1 = config1.teachers
+    val newTeachers1 = file.config1.teachers.map(_._id)
+    val deletedTeachers1 = oldTeachers1.filter(x => !newTeachers1.contains(x._id))
+
+    val oldTeachers2 = config1.teachers
+    val newTeachers2 = file.config1.teachers.map(_._id)
+    val deletedTeachers2 = oldTeachers2.filter(x => !newTeachers2.contains(x._id))
+
+    val oldGroups1 = config1.groups
+    val newGroups1 = file.config1.groups.map(_._id)
+    val deletedGroups1 = oldGroups1.filter(x => !newGroups1.contains(x._id))
+
+    val oldGroups2 = config2.groups
+    val newGroups2 = file.config2.groups.map(_._id)
+    val deletedGroups2 = oldGroups2.filter(x => !newGroups2.contains(x._id))
+
+    deletedTeachers1 ++ deletedTeachers2 ++ deletedGroups1 ++ deletedGroups2
+  }
+
   def setNew(file: File): File = {
     val oldTeachers1 = config1.teachers
     val oldTeachers1Map = oldTeachers1.map(x => (x._id, x)).toMap

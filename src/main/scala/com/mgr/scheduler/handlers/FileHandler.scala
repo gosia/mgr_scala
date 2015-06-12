@@ -72,11 +72,11 @@ object FileHandler extends Logging with Couch {
   }
 
   def saveRelated(doc: docs.File, file: datastructures.File): Future[Unit] = {
-    // TODO(gosia): remove removed line elements
     doc.linked match {
       case false => Future.Unit
       case true =>
         serializers.Ii(doc).toFileDef flatMap { currentFile =>
+          val docsToDelete = currentFile.getNewDeleted(file)
           val newFile = currentFile.setNew(file)
 
           val part1 = newFile.config1.allDocs
@@ -85,9 +85,21 @@ object FileHandler extends Logging with Couch {
           couchClient.bulkAdd(part1) flatMap { rseq: Seq[CouchResponse] => {
             CouchResponse.logErrors(rseq)
 
-            couchClient.bulkAdd(part2) map { rseq: Seq[CouchResponse] => {
+            couchClient.bulkAdd(part2) flatMap { rseq: Seq[CouchResponse] => {
               CouchResponse.logErrors(rseq)
-              ()
+
+              val deleteRelatedF = Future.collect {
+                docsToDelete.map { doc =>
+                  ConfigHandler.removeTermRelatedObjects(doc.config_id, doc._id)
+                }
+              }
+
+              deleteRelatedF flatMap { _ =>
+                couchClient.bulkDelete(docsToDelete) map { rseq: Seq[CouchResponse] =>
+                  CouchResponse.logErrors(rseq)
+                  ()
+                }
+              }
             }}
 
           }}
