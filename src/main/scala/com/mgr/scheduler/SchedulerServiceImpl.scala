@@ -146,4 +146,23 @@ class SchedulerServiceImpl(
     handlers.FileHandler.link(fileId) handle exceptions
   }
 
+  def listConfigVotes(): Future[Seq[scheduler.UsersVotes]] = {
+    handlers.VoteHandler.list() handle exceptions
+  }
+
+  def getConfigVotes(configId: String): Future[scheduler.UsersVotes] = {
+    handlers.VoteHandler.get(configId) handle exceptions
+  }
+
+  def setConfigVotes(
+    configId: String,
+    votes: scala.collection.Map[String, scala.collection.Map[String, Short]]
+  ): Future[Unit] = {
+    handlers.VoteHandler.set(configId, votes.mapValues(_.toMap).toMap) handle exceptions
+  }
+
+  def deleteConfigVotes(configId: String): Future[Unit] = {
+    handlers.VoteHandler.delete(configId) handle exceptions
+  }
+
 }

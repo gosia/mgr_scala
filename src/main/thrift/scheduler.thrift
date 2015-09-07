@@ -158,6 +158,12 @@ struct File {
   2: string content;
 }
 
+struct UsersVotes {
+  1: Id config_id;
+  2: i16 votes_num;
+  3: map<Id, map<Id, i16>> votes;
+}
+
 service SchedulerService {
 
   void createConfig(
@@ -229,6 +235,21 @@ service SchedulerService {
   ) throws (
     1: SchedulerException se;
     2: ValidationException ve;
+  )
+
+  list<UsersVotes> listConfigVotes()
+
+  UsersVotes getConfigVotes(
+    1: Id config_id;
+  )
+
+  void setConfigVotes(
+    1: Id config_id;
+    2: map<Id, map<Id, i16>> votes;
+  )
+
+  void deleteConfigVotes(
+    1: Id config_id;
   )
 
   list<TaskInfo> getTasks(

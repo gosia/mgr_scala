@@ -89,3 +89,18 @@ final case class ViewResult(
     DocInfo(row.id, Some(rev))
   }
 }
+
+final case class ReducedViewRow(
+  key: json.JValue,
+  value: json.JValue
+)
+
+final case class ReducedViewResult(
+  rows: Seq[ReducedViewRow]
+) extends Logging {
+
+  def mapValues[DocType: Manifest, T](f: DocType => T): Seq[T] = {
+    rows map { _.value.extract[DocType] } map f
+  }
+  def values[DocType: Manifest]: Seq[DocType] = rows map { _.value.extract[DocType] }
+}

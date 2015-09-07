@@ -112,7 +112,8 @@ case class ViewQueryBuilder(
   endkey_docid: Option[String] = None,
   limit: Option[Int] = None,
   reduce: Option[Boolean] = None,
-  include_docs: Option[Boolean] = None
+  include_docs: Option[Boolean] = None,
+  group_level: Option[Short] = None
 ) extends RequestUtils {
 
   def startkey(startkey: Any): ViewQueryBuilder = this.copy(startkey=Some(startkey))
@@ -121,12 +122,21 @@ case class ViewQueryBuilder(
   def reduce(reduce: Boolean): ViewQueryBuilder = this.copy(reduce=Some(reduce))
   def includeDocs: ViewQueryBuilder = this.copy(include_docs=Some(true))
   def keys(xs: Seq[Any]): ViewQueryBuilder = this.copy(keys=Some(xs))
+  def groupLevel(x: Short): ViewQueryBuilder = this.copy(group_level=Some(x))
 
   def execute: Future[ViewResult] = {
     log.info(s"COUCH: VIEW $viewName")
     doViewRequest(viewName, queryBody, queryParams) map {
       j: String =>
         json.parse(j).extract[ViewResult]
+    }
+  }
+
+  def executeReduced: Future[ReducedViewResult] = {
+    log.info(s"COUCH: VIEW $viewName")
+    doViewRequest(viewName, queryBody, queryParams) map {
+      j: String =>
+        json.parse(j).extract[ReducedViewResult]
     }
   }
 
