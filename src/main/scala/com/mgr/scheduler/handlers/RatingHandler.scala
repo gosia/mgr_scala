@@ -20,11 +20,12 @@ object RatingHandler extends Logging  with Couch {
     val userCourses = votes.keys.toSet
     val userTimetable = timetable.filter(t => userCourses.contains(groupsMap(t.group).extra.course))
 
-    val vector: Seq[Seq[docs.Term]] = userTimetable.foldLeft(Map[String, Set[docs.Term]]())({ (userTimetableMap, t) =>
-      val group = groupsMap(t.group)
-      val key = "${group.extra.course}:${group.extra.group_type}"
+    val vector: Seq[Seq[docs.Term]] = userTimetable.foldLeft(Map[String, Set[docs.Term]]())({
+      (userTimetableMap, t) =>
+        val group = groupsMap(t.group)
+        val key = "${group.extra.course}:${group.extra.group_type}"
 
-      userTimetableMap + (key -> (userTimetableMap.getOrElse(key, Set()) + termsMap(t.term)))
+        userTimetableMap + (key -> (userTimetableMap.getOrElse(key, Set()) + termsMap(t.term)))
     }).mapValues(_.toSeq).values.toSeq
 
     val possibilityNum = vector.foldLeft(1)({ (x, seq) => x * seq.size}).toShort
@@ -39,7 +40,9 @@ object RatingHandler extends Logging  with Couch {
           val zeroIndices = (0 to i).foldLeft[Seq[Int]](indices) {case (newIndices, ii) =>
             newIndices.updated(ii, 0)
           }
-          val result = (i + 1 to vector.size - 1).foldLeft[(Seq[Int], Int, Boolean)](zeroIndices, -1, false) {
+          val result = (i + 1 to vector.size - 1).foldLeft[(Seq[Int], Int, Boolean)](
+            zeroIndices, -1, false
+          ) {
             case (x, ii) =>
               x._3 match {
                 case true => x
