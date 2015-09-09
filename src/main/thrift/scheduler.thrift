@@ -281,6 +281,13 @@ service SchedulerService {
     2: ValidationException ve;
   )
 
+  i16 getTaskRating(
+    1: Id task_id;
+  ) throws (
+    1: SchedulerException se;
+    2: ValidationException ve;
+  )
+
   TaskStatus getTaskStatus(
     1: Id task_id;
   ) throws (

@@ -158,6 +158,17 @@ object Term extends BaseObj {
     }}
   }
 
+  def countConflicts(terms: Seq[Term]): Int = {
+    terms.zipWithIndex.map { case (term1, i1) =>
+      terms.zipWithIndex map { case (term2, i2) =>
+        i1 < i2 match {
+          case true => if (term1.compare(term2) == 0) 1 else 0
+          case false => 0
+        }
+      } sum
+    } sum
+  }
+
 }
 
 object TimeOrdering extends Ordering[Time] {

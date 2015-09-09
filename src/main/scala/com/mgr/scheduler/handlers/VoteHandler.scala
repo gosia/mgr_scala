@@ -15,6 +15,8 @@ import com.mgr.utils.logging.Logging
 object VoteHandler extends Logging  with Couch {
 
   def set(configId: String, votes: Map[String, Map[String, Short]]): Future[Unit] = {
+    log.info(s"VOTE: Set for config $configId")
+
     VoteHandler.delete(configId) flatMap { _ =>
       val allDocs = votes.keys.toSeq.map(user => docs.UserVote(configId, votes, user))
 
@@ -26,6 +28,8 @@ object VoteHandler extends Logging  with Couch {
   }
 
   def get(configId: String): Future[scheduler.UsersVotes] = {
+    log.info(s"VOTE: Get for config $configId")
+
     val votesQ = couchClient.view("votes/by_config")
       .startkey(configId)
       .endkey(configId)
@@ -38,6 +42,8 @@ object VoteHandler extends Logging  with Couch {
   }
 
   def list(): Future[Seq[scheduler.UsersVotes]] = {
+    log.info(s"VOTE: List")
+
     val votesQ = couchClient.view("votes/by_config")
       .reduce(true)
       .groupLevel(1)
@@ -52,6 +58,8 @@ object VoteHandler extends Logging  with Couch {
   }
 
   def delete(configId: String): Future[Unit] = {
+    log.info(s"VOTE: Delete for config $configId")
+
     couchClient.exists(configId) flatMap {
       case false => throw scheduler.ValidationException("Przydział o podanym id nie istnieje")
       case true =>
