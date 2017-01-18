@@ -104,7 +104,8 @@ struct Config {
 
 enum Algorithm {
   RANDOM,
-  MANUAL
+  MANUAL,
+  RANDOM_ORDERED_GROUPS
 }
 
 enum TaskStatus {
@@ -190,7 +191,7 @@ service SchedulerService {
     1: SchedulerException se;
     2: ValidationException ve;
   )
-  
+
   list<ConfigBasicInfo> getConfigs(
   ) throws (
     1: SchedulerException se;
@@ -207,7 +208,7 @@ service SchedulerService {
     1: SchedulerException se;
     2: ValidationException ve;
   )
-  
+
   void editConfigElement(
     1: Id id;
     2: list<Term> terms;
@@ -218,7 +219,7 @@ service SchedulerService {
     1: SchedulerException se;
     2: ValidationException ve;
   )
-  
+
   void removeConfigElement(
     1: Id config_id;
     2: Id element_id;

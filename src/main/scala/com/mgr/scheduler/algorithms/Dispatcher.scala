@@ -8,7 +8,8 @@ import com.mgr.thrift.scheduler
 object Dispatcher extends Base {
 
   val classMapper = Map(
-    scheduler.Algorithm.Random.name.toLowerCase -> Random
+    scheduler.Algorithm.Random.name.toLowerCase -> Random,
+    scheduler.Algorithm.RandomOrderedGroups.name.toLowerCase -> RandomOrderedGroups
   )
 
   def start(task: docs.Task): Future[Unit] = {
