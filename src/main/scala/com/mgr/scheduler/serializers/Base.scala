@@ -121,6 +121,34 @@ trait Base extends Logging with Couch {
       ) } toMap
   }
 
+  private def fixStudentsNum(groups: Seq[docs.Group]): Seq[docs.Group] = {
+
+    val map: Map[String, Map[String, Int]] =
+      groups.foldLeft(Map[String, Map[String, Int]]()) { case (m, g) =>
+        val newNum: Int = g.students_num +
+          m.getOrElse(g.extra.course, Map()).getOrElse(g.extra.group_type, 0)
+        val newMap: Map[String, Int] = m.getOrElse(g.extra.course, Map()) +
+          (g.extra.group_type -> newNum)
+        m + (g.extra.course -> newMap)
+      }
+
+    groups map { g => {
+      g.extra.group_type match {
+        case "w" | "e" =>
+          val studentsNum = {
+            val xs: Iterable[Int] = map.getOrElse(g.extra.course, Map()).values
+            xs.size match {
+              case 0 => 0
+              case _ => xs.max
+            }
+          }
+          g.copy(students_num = studentsNum)
+        case _ => g
+      }
+    } }
+
+  }
+
   private def toFileDefNoDb: datastructures.File = {
     val configId1: String = s"$fileId-1"
     val configId2: String = s"$fileId-2"
@@ -130,7 +158,7 @@ trait Base extends Logging with Couch {
     val config1 = datastructures.Config(
       teachers = linesSeq.teachers1,
       labels = getLabelDocs(configId1),
-      groups = linesSeq.groups1,
+      groups = fixStudentsNum(linesSeq.groups1),
       terms = allTermsF(configId1),
       rooms = getRoomDocs(configId1),
       configId = configId1
@@ -138,7 +166,7 @@ trait Base extends Logging with Couch {
     val config2 = datastructures.Config(
       teachers = linesSeq.teachers2,
       labels = getLabelDocs(configId2),
-      groups = linesSeq.groups2,
+      groups = fixStudentsNum(linesSeq.groups2),
       terms = allTermsF(configId2),
       rooms = getRoomDocs(configId2),
       configId = configId2

@@ -124,6 +124,15 @@ trait IiLinear extends datastructures.Linear {
 
     val id = docs.Group.getCouchId(configId, groupId.toString)
 
+    val studentsNumMap: Map[String, Int] = Map(
+      "c" -> 15,
+      "p" -> 15,
+      "w" -> 0,
+      "e" -> 0,
+      "r" -> 15,
+      "s" -> 15
+    )
+
     docs.Group(
       _id = id,
       config_id = configId,
@@ -133,7 +142,7 @@ trait IiLinear extends datastructures.Linear {
       teachers = Seq(docs.Teacher.getCouchId(configId, teacherId)),
       terms = allTermIds(configId),
       terms_num = hours.toInt,
-      students_num = 15,
+      students_num = studentsNumMap.getOrElse(groupType, 0), // w, e is counted in fixStudentsNum
       extra = docs.GroupExtra(course = courseName, group_type = groupType, notes = notes)
     )
   }

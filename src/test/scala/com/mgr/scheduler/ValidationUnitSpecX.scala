@@ -2,7 +2,7 @@ package com.mgr.scheduler
 
 import org.specs2.mutable._
 
-class ValidationUnitSpec extends SpecificationWithJUnit {
+class ValidationUnitSpecX extends SpecificationWithJUnit {
 
   "Room validation" should {
 
