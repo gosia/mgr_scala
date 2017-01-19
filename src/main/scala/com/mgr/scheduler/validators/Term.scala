@@ -32,7 +32,6 @@ object Term extends Logging {
     timetable: Map[String, Seq[(String, String)]],
     teacherMap: Map[String, Set[String]]
   ): Set[String] = {
-    log.info(s"Getting valid term ids for group ${group._id}")
     validSameGroup(group, allTerms, timetable) &
       validDiffGroup(group, allTerms, timetable) &
       validTeachers(group, teacherMap)

@@ -14,7 +14,7 @@ case class RandomOrderedGroups() extends RandomBase {
       val validRoomIds = validators.Room.getIds(group, rt.rooms)
       val validTermIds = validators.Term.getIds(group, rt.allTerms, rt.timetable, rt.teacherMap)
 
-      val validRoomTimes = rt.remainingRoomTimes.filterNot({
+      val validRoomTimes = rt.remainingRoomTimes.filter({
         case (roomId, termId) => validRoomIds.contains(roomId) && validTermIds.contains(termId)
       })
 

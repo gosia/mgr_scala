@@ -14,7 +14,6 @@ case class RoomTimes(
 ) extends Logging {
 
   def transition(group: docs.Group, nextRoomTime: (String, String)): RoomTimes = {
-    log.info(s"Transition ${group.getRealId} with $nextRoomTime")
     val newTimetable: Map[String, Seq[(String, String)]] = timetable.get(group._id) match {
       case None => timetable + (group._id -> Seq(nextRoomTime))
       case Some(_) => timetable.map({ case (k, v) => {
@@ -66,7 +65,6 @@ object RoomTimes extends Logging {
     terms: Seq[docs.Term], rooms: Seq[docs.Room], remainingRoomTimes: Seq[(String, String)],
     num: Int
   ): Seq[Seq[(String, String)]] = {
-    log.info(s"Getting remaining room times by num $num")
     val termsMap = terms.map(t => (t._id, t)).toMap
     val roomsMap: Map[String, Seq[docs.Term]] = rooms.map(
       r => r.terms.map(t => (r._id, termsMap(t)))
@@ -88,7 +86,6 @@ object RoomTimes extends Logging {
           } } toMap
         }
       }
-    log.info(s"$mm")
     mm(num)
   }
 

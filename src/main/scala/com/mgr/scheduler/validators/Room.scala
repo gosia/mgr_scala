@@ -6,17 +6,11 @@ import com.mgr.utils.logging.Logging
 object Room extends Logging {
 
   def validRoomCapacity(group: docs.Group, rooms: Seq[docs.Room]): Set[String] = {
-    val capacityMap = rooms.map(room => (room.capacity, room._id)).toMap
-    val keys = capacityMap.keys.filter(group.students_num <= _)
-    keys.map(capacityMap.get).flatten.toSet
+    rooms.filter({r: docs.Room => group.students_num <= r.capacity }).map(_._id).toSet
   }
 
   def validRoomLabel(group: docs.Group, rooms: Seq[docs.Room]): Set[String] = {
-    val labelMap: Map[String, Seq[String]] = rooms.map(
-      room => room.labels.map(label => (label, room._id))
-    ).flatten.groupBy(_._1).mapValues(_.map(x => x._2))
-
-    group.labels.map(labelMap.get).flatten.flatten.toSet
+    rooms.filter({r: docs.Room => (r.labels intersect group.labels).nonEmpty }).map(_._id).toSet
   }
 
   def getIds(group: docs.Group, rooms: Seq[docs.Room]): Set[String] = {

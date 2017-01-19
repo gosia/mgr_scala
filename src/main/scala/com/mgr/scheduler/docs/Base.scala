@@ -7,6 +7,7 @@ trait Base extends couch.Document with Logging {
   val config_id: String
 
   def getRealId: String = this._id.split(":").tail.tail.mkString(":")
+  def getRealIdNum: Int = this._id.split(":").last.toInt
 }
 
 trait BaseObj {
