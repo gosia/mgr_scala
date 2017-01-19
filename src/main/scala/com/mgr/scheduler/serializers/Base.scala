@@ -20,7 +20,7 @@ trait Base extends Logging with Couch {
   val configId1: String = s"$fileId-1"
   val configId2: String = s"$fileId-2"
 
-  def allTermsF(configId: String): Seq[docs.Term] = (0 to 5).map({ day =>
+  def allTermsF(configId: String): Seq[docs.Term] = (0 to 4).map({ day =>
     (8 to 21).map { hour =>
       (day == 0 && hour < 12) || (day == 4 && hour >= 12) match {
         case true => None
