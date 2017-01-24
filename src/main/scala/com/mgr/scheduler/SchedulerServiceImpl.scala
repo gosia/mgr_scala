@@ -109,8 +109,12 @@ class SchedulerServiceImpl(
     handlers.TaskHandler.deleteTask(taskId) handle exceptions
   }
 
-  def getTaskRating(taskId: String): Future[Short] = {
-    handlers.RatingHandler.getRating(taskId) handle exceptions
+  def recountTaskRatingHelper(taskId: String): Future[Unit] = {
+    handlers.RatingHandler.countRatingHelper(taskId) handle exceptions
+  }
+
+  def getTaskRatingHelper(taskId: String): Future[scheduler.TaskRatingHelper] = {
+    handlers.RatingHandler.getRatingHelper(taskId) handle exceptions
   }
 
   def addTaskEvent(

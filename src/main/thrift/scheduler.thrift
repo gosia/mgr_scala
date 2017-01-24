@@ -135,6 +135,23 @@ struct Rating {
   5: TeacherRating teacher_rating;
 }
 
+struct TermRatingHelper {
+  1: list<string> start_even_groups;
+  2: list<string> start_odd_groups;
+}
+struct RoomRatingHelper {
+  1: map<string, list<string>> empty_chair_groups;
+}
+struct TeacherRatingHelper {
+  1: map<string, map<string, i32>> hours_in_work;
+}
+
+struct TaskRatingHelper {
+  1: TermRatingHelper term_rating_helper;
+  2: RoomRatingHelper room_rating_helper;
+  3: TeacherRatingHelper teacher_rating_helper;
+}
+
 enum Algorithm {
   RANDOM,
   MANUAL,
@@ -315,13 +332,6 @@ service SchedulerService {
     2: ValidationException ve;
   )
 
-  i16 getTaskRating(
-    1: Id task_id;
-  ) throws (
-    1: SchedulerException se;
-    2: ValidationException ve;
-  )
-
   TaskStatus getTaskStatus(
     1: Id task_id;
   ) throws (
@@ -337,6 +347,20 @@ service SchedulerService {
   )
 
   Timetable getTaskResult(
+    1: Id task_id;
+  ) throws (
+    1: SchedulerException se;
+    2: ValidationException ve;
+  )
+
+  void recountTaskRatingHelper(
+    1: Id task_id;
+  ) throws (
+    1: SchedulerException se;
+    2: ValidationException ve;
+  )
+
+  TaskRatingHelper getTaskRatingHelper(
     1: Id task_id;
   ) throws (
     1: SchedulerException se;

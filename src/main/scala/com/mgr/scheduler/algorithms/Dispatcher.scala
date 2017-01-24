@@ -3,6 +3,7 @@ package com.mgr.scheduler.algorithms
 import com.twitter.util.Future
 
 import com.mgr.scheduler.docs
+import com.mgr.scheduler.handlers.RatingHandler
 import com.mgr.thrift.scheduler
 
 object Dispatcher extends Base {
@@ -13,6 +14,8 @@ object Dispatcher extends Base {
   )
 
   def start(task: docs.Task): Future[Unit] = {
-    classMapper.get(task.algorithm).get().start(task)
+    classMapper.get(task.algorithm).get().start(task) map { _ =>
+      RatingHandler.countRatingHelper(task._id)
+    }
   }
 }
