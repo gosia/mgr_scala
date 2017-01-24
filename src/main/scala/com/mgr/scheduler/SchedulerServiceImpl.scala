@@ -169,4 +169,16 @@ class SchedulerServiceImpl(
     handlers.VoteHandler.delete(configId) handle exceptions
   }
 
+  def saveRating(rating: scheduler.Rating): Future[Unit] =
+    handlers.RatingHandler.save(rating) handle exceptions
+
+  def deleteRating(ratingId: String): Future[Unit] =
+    handlers.RatingHandler.delete(ratingId) handle exceptions
+
+  def getRating(ratingId: String): Future[scheduler.Rating] =
+    handlers.RatingHandler.get(ratingId) handle exceptions
+
+  def getRatings(): Future[Seq[scheduler.Rating]] =
+    handlers.RatingHandler.list() handle exceptions
+
 }

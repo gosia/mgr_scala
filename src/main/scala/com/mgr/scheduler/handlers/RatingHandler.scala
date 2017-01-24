@@ -4,7 +4,9 @@ import com.twitter.util.Future
 
 import com.mgr.scheduler.Couch
 import com.mgr.scheduler.docs
+import com.mgr.scheduler.handlers.ConfigHandler.couchClient
 import com.mgr.thrift.scheduler
+import com.mgr.utils.couch.ViewResult
 import com.mgr.utils.logging.Logging
 
 object RatingHandler extends Logging  with Couch {
@@ -119,4 +121,48 @@ object RatingHandler extends Logging  with Couch {
     }
   }
 
+
+  def delete(ratingId: String): Future[Unit] = {
+    log.info(s"Deleting rating $ratingId")
+
+    couchClient.get[docs.Rating](docs.Rating.getCouchId(ratingId)) flatMap {
+      case None => throw scheduler.ValidationException(s"Rating $ratingId nie istnieje")
+      case Some(doc) => couchClient.delete[docs.Rating](doc) map { _ => () }
+    }
+  }
+
+  def get(ratingId: String): Future[scheduler.Rating] = {
+    log.info(s"Getting rating $ratingId")
+    couchClient.get[docs.Rating](docs.Rating.getCouchId(ratingId)) map {
+      case None => throw scheduler.ValidationException(s"Rating $ratingId nie istnieje")
+      case Some(doc) => doc.toThrift
+    }
+  }
+
+  def list(): Future[Seq[scheduler.Rating]] = {
+    log.info(s"Listing ratings")
+
+    val query = couchClient
+      .view("utils/by_type")
+      .startkey("rating")
+      .endkey("rating")
+      .includeDocs
+
+    query.execute map { result: ViewResult =>
+      result.mapDocs[docs.Rating, scheduler.Rating] { _.toThrift }
+    }
+  }
+
+  def save(rating: scheduler.Rating): Future[Unit] = {
+    log.info(s"Saving rating ${rating.id}")
+
+    val newDoc: docs.Rating = docs.Rating(rating)
+
+    couchClient.get[docs.Rating](docs.Rating.getCouchId(rating.id)) flatMap {
+      case None => couchClient.update[docs.Rating](newDoc) map { _ => ()}
+      case Some(doc) =>
+        couchClient.update[docs.Rating](newDoc.copy(_rev = doc._rev)) map { _ => ()}
+    }
+
+  }
 }

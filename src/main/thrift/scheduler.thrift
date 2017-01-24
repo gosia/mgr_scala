@@ -2,6 +2,7 @@ namespace java com.mgr.thrift.scheduler
 namespace py scheduler
 
 typedef string Id
+typedef i32 Points
 
 exception ValidationException {
   1: string message;
@@ -100,6 +101,38 @@ struct Config {
   3: list<Room> rooms;
   4: list<Teacher> teachers;
   5: list<Group> groups;
+}
+
+struct TermRating {
+  1: map<Id, Points> terms;
+  2: Points start_even;
+  3: Points start_odd;
+  4: map<i32, Points> terms_day_bonus;
+  5: map<i32, Points> terms_hour_bonus;
+}
+
+struct RoomRating {
+  1: map<i32, Points> too_big_capacity;
+}
+
+struct TeacherRating {
+  1: map<i32, Points> total_hours_in_work;
+  2: map<i32, Points> no_work_days_num;
+  3: Points no_work_days_on_mon_fri;
+}
+
+struct RatingWeights {
+  1: Points term_rating;
+  2: Points room_rating;
+  3: Points teacher_rating;
+}
+
+struct Rating {
+  1: Id id;
+  2: RatingWeights weights;
+  3: TermRating term_rating;
+  4: RoomRating room_rating;
+  5: TeacherRating teacher_rating;
 }
 
 enum Algorithm {
@@ -375,5 +408,32 @@ service SchedulerService {
     1: SchedulerException se;
     2: ValidationException ve;
   )
+
+    void deleteRating(
+      1: Id rating_id;
+    ) throws (
+      1: SchedulerException se;
+      2: ValidationException ve;
+    )
+
+    Rating getRating(
+      1: Id rating_id;
+    ) throws (
+      1: SchedulerException se;
+      2: ValidationException ve;
+    )
+
+    list<Rating> getRatings() throws (
+      1: SchedulerException se;
+      2: ValidationException ve;
+    )
+
+    void saveRating(
+      1: Rating rating;
+    ) throws (
+      1: SchedulerException se;
+      2: ValidationException ve;
+    )
+
 
 }
