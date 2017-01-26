@@ -1,6 +1,8 @@
 package com.mgr.scheduler.algorithms
 
+import com.twitter.conversions.time._
 import com.twitter.util.Future
+import com.twitter.util.JavaTimer
 
 import com.mgr.scheduler.docs
 import com.mgr.scheduler.handlers.RatingHandler
@@ -14,8 +16,10 @@ object Dispatcher extends Base {
   )
 
   def start(task: docs.Task): Future[Unit] = {
-    classMapper.get(task.algorithm).get().start(task) map { _ =>
-      RatingHandler.countRatingHelper(task._id)
+    classMapper.get(task.algorithm).get().start(task) flatMap { _ =>
+      Future.sleep(2.seconds)(new JavaTimer(true)) map { _ =>
+        RatingHandler.countRatingHelper(task._id)
+      }
     }
   }
 }

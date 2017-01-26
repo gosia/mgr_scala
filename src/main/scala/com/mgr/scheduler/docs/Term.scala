@@ -13,7 +13,7 @@ final case class Time(
   def isTheSame(other: Time): Boolean = this.hour == other.hour && this.minute == other.minute
 
   def minus(other:Time): Int = {
-    hour * 60 + minute - (other.hour * 60 - other.minute)
+    hour * 60 + minute - (other.hour * 60 + other.minute)
   }
 }
 
