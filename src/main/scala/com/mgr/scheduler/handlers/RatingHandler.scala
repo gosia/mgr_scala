@@ -124,6 +124,79 @@ object RatingHandler extends Logging  with Couch {
 
   }
 
+  def countRatingHelperDoc(
+    taskId: String,
+    timetable: Seq[docs.GroupRoomTerm],
+    groupsMap: Map[String, docs.Group],
+    teachersMap: Map[String, docs.Teacher],
+    roomsMap: Map[String, docs.Room],
+    termsMap: Map[String, docs.Term],
+    labelsMap: Map[String, docs.Label]
+  ) = {
+
+    val groupToTimetable: Map[String, Seq[docs.GroupRoomTerm]] = timetable.groupBy(_.group)
+
+    val startParity: Map[String, Boolean] = groupToTimetable.map({
+      case (groupId, groupTimetable) =>
+        val terms: Seq[docs.Term] = groupTimetable.map({ x => termsMap(x.term)})
+        val minTime: docs.Time = terms.minBy({ x => x.start })(docs.TimeOrdering).start
+        (groupId, minTime.hour % 2 == 0)
+    })
+
+    val startEvenGroups: Seq[String] = startParity
+      .filter({ case (groupId, isEven) => isEven }).keys.toSeq
+    val startOddGroups: Seq[String] = startParity
+      .filterNot({ case (groupId, isEven) => isEven }).keys.toSeq
+
+    val emptyChairGroups: Map[Int, Seq[String]] = groupToTimetable.map({
+      case (groupId, groupTimetable) =>
+        val rooms: Seq[docs.Room] = groupTimetable.map({ x => roomsMap(x.room)})
+        val maxCapacity: Int = rooms.maxBy({ x => x.capacity }).capacity
+        (groupId, maxCapacity - groupsMap(groupId).students_num)
+    }).toSeq.groupBy(_._2).mapValues({ xs => xs.map(_._1) })
+
+    val hourInWorkTeachers: Map[String, Map[Int, Int]] = timetable
+      .foldLeft(Map[String, Map[Int, Set[docs.Term]]]()) { case (m, grt) =>
+
+        val teachers = groupsMap(grt.group).teachers
+        val term = termsMap(grt.term)
+
+        teachers.foldLeft(m) { case (mm, teacher) =>
+          val teacherMap = mm.getOrElse(teacher, Map[Int, Set[docs.Term]]())
+          val newDayTerms: Set[docs.Term] = teacherMap.getOrElse(
+            scheduler.Day.valueOf(term.day).get.value, Set()
+          ) + term
+          val newTeacherMap = teacherMap +
+            (scheduler.Day.valueOf(term.day).get.value -> newDayTerms)
+
+          mm + (teacher -> newTeacherMap)
+        }
+
+      }
+      .mapValues({ m => m.mapValues({ s =>
+        val minTime: docs.Time = s.minBy(x => x.start)(docs.TimeOrdering).start
+        val maxTime: docs.Time = s.maxBy(x => x.end)(docs.TimeOrdering).end
+        maxTime minus minTime
+      })})
+
+     docs.TaskRatingHelper(
+      _id=docs.TaskRatingHelper.getCouchId(taskId),
+      _rev=None,
+      term_rating_helper = docs.TermRatingHelper(
+        start_even_groups = startEvenGroups,
+        start_odd_groups = startOddGroups
+      ),
+      room_rating_helper = docs.RoomRatingHelper(
+        emptyChairGroups.map({ case (k, v) => (k.toString, v)})
+      ),
+      teacher_rating_helper = docs.TeacherRatingHelper(
+        hourInWorkTeachers.map({
+          case (k1, v1) => (k1, v1.map({ case (k2, v2) => (k2.toString, v2) }))
+        })
+      )
+    )
+  }
+
   def countRatingHelper(taskId: String): Future[Unit] = {
     log.info(s"RATING: Counting for $taskId")
 
@@ -134,72 +207,12 @@ object RatingHandler extends Logging  with Couch {
         val configId = task.config_id
         val timetable: Seq[docs.GroupRoomTerm] = task.timetable getOrElse Seq()
 
-        log.info(s"RATING: Counting based on ${timetable.size} items")
-
-        val groupToTimetable: Map[String, Seq[docs.GroupRoomTerm]] = timetable.groupBy(_.group)
-
         ConfigHandler.getConfigDefMap(
           configId
         ) flatMap { case (groupsMap, teachersMap, roomsMap, termsMap, labelsMap) =>
 
-          val startParity: Map[String, Boolean] = groupToTimetable.map({
-            case (groupId, groupTimetable) =>
-              val terms: Seq[docs.Term] = groupTimetable.map({ x => termsMap(x.term)})
-              val minTime: docs.Time = terms.minBy({ x => x.start })(docs.TimeOrdering).start
-              (groupId, minTime.hour % 2 == 0)
-          })
-
-          val startEvenGroups: Seq[String] = startParity
-            .filter({ case (groupId, isEven) => isEven }).keys.toSeq
-          val startOddGroups: Seq[String] = startParity
-            .filterNot({ case (groupId, isEven) => isEven }).keys.toSeq
-
-          val emptyChairGroups: Map[Int, Seq[String]] = groupToTimetable.map({
-            case (groupId, groupTimetable) =>
-              val rooms: Seq[docs.Room] = groupTimetable.map({ x => roomsMap(x.room)})
-              val maxCapacity: Int = rooms.maxBy({ x => x.capacity }).capacity
-              (groupId, maxCapacity - groupsMap(groupId).students_num)
-          }).toSeq.groupBy(_._2).mapValues({ xs => xs.map(_._1) })
-
-          val hourInWorkTeachers: Map[String, Map[Int, Int]] = timetable
-            .foldLeft(Map[String, Map[Int, Set[docs.Term]]]()) { case (m, grt) =>
-
-                val teachers = groupsMap(grt.group).teachers
-                val term = termsMap(grt.term)
-
-                teachers.foldLeft(m) { case (mm, teacher) =>
-                  val teacherMap = mm.getOrElse(teacher, Map[Int, Set[docs.Term]]())
-                  val newDayTerms: Set[docs.Term] = teacherMap.getOrElse(
-                    scheduler.Day.valueOf(term.day).get.value, Set()
-                  ) + term
-                  val newTeacherMap = teacherMap +
-                    (scheduler.Day.valueOf(term.day).get.value -> newDayTerms)
-
-                  mm + (teacher -> newTeacherMap)
-                }
-
-            }
-            .mapValues({ m => m.mapValues({ s =>
-              val minTime: docs.Time = s.minBy(x => x.start)(docs.TimeOrdering).start
-              val maxTime: docs.Time = s.maxBy(x => x.end)(docs.TimeOrdering).end
-              maxTime minus minTime
-            })})
-
-          val newDoc = docs.TaskRatingHelper(
-            _id=docs.TaskRatingHelper.getCouchId(taskId),
-            _rev=None,
-            term_rating_helper = docs.TermRatingHelper(
-              start_even_groups = startEvenGroups,
-              start_odd_groups = startOddGroups
-            ),
-            room_rating_helper = docs.RoomRatingHelper(
-              emptyChairGroups.map({ case (k, v) => (k.toString, v)})
-            ),
-            teacher_rating_helper = docs.TeacherRatingHelper(
-              hourInWorkTeachers.map({
-                case (k1, v1) => (k1, v1.map({ case (k2, v2) => (k2.toString, v2) }))
-              })
-            )
+          val newDoc = countRatingHelperDoc(
+            taskId, timetable, groupsMap, teachersMap, roomsMap, termsMap, labelsMap
           )
 
           couchClient.get[docs.TaskRatingHelper](docs.TaskRatingHelper.getCouchId(taskId)) flatMap {

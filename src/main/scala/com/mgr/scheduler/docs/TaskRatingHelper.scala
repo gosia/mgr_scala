@@ -39,6 +39,7 @@ final case class TaskRatingHelper(
 
   `type`: String = "task_rating_helper"
 ) extends couch.Document {
+
   def toThrift: scheduler.TaskRatingHelper = scheduler.TaskRatingHelper(
     term_rating_helper.toThrift,
     room_rating_helper.toThrift,

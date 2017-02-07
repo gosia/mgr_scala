@@ -42,6 +42,14 @@ case class RoomTimes(
     RoomTimes.getRemainingRoomTimesByNum(terms, rooms, roomTimes, num: Int)
   }
 
+  def getDocsTimetable: Seq[docs.GroupRoomTerm] = {
+    timetable.toSeq.flatMap({
+      case (group, xs) => xs.map({
+        case (room, term) => docs.GroupRoomTerm(group, room, term)
+      })
+    })
+  }
+
 }
 
 object RoomTimes extends Logging {

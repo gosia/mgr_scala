@@ -1,8 +1,8 @@
 package com.mgr.scheduler.algorithms
 
-import com.twitter.util.Future
-
 import scala.util.{Random => ScalaRandom}
+
+import com.twitter.util.Future
 
 import com.mgr.scheduler.datastructures.RoomTimes
 import com.mgr.scheduler.docs
@@ -13,35 +13,55 @@ import com.mgr.utils.logging.Logging
 
 
 abstract class RandomBase extends Base with Logging {
-  def drawRandomRoomTimes(group: docs.Group, rt: RoomTimes): Seq[(String, String)] = {
+  def getValidRoomTimes(group: docs.Group, rt: RoomTimes): Seq[(String, String)] = {
+    val validRoomIds = validators.Room.getIds(group, rt.rooms)
+    val validTermIds = validators.Term.getIds(group, rt.allTerms, rt.timetable, rt.teacherMap)
+
+    val validRoomTimes = rt.remainingRoomTimes.filter({
+      case (roomId, termId) => validRoomIds.contains(roomId) && validTermIds.contains(termId)
+    })
+
+    validRoomTimes
+  }
+
+  def getValidRoomTimesByNum(group: docs.Group, rt: RoomTimes): Seq[Seq[(String, String)]] = {
+
+    val validRoomTimes = getValidRoomTimes(group, rt)
+
+    if (validRoomTimes.isEmpty) {
+      throw scheduler.SchedulerException("No room time to pick from!")
+    }
+
+    val validRoomTimesByNum: Seq[Seq[(String, String)]] =
+      rt.getRemainingRoomTimesByNum(validRoomTimes, group.terms_num)
+
+    if (validRoomTimesByNum.isEmpty) {
+      throw scheduler.SchedulerException("No num room time to pick from!")
+    }
+
+    validRoomTimesByNum
+  }
+
+  def orderGroups(groups: Seq[docs.Group], rt: RoomTimes): Future[Seq[docs.Group]]
+  def getRoomTimes(
+    group: docs.Group, rt: RoomTimes,
+    taskId: String,
+    groupsMap: Map[String, docs.Group],
+    teachersMap: Map[String, docs.Teacher],
+    roomsMap: Map[String, docs.Room],
+    termsMap: Map[String, docs.Term],
+    labelsMap: Map[String, docs.Label]
+  ): Seq[(String, String)]
+
+  def drawRoomTimes(group: docs.Group, rt: RoomTimes): Seq[(String, String)] = {
 
     group.terms_num match {
       case 0 => Seq()
       case _ =>
-        val validRoomIds = validators.Room.getIds(group, rt.rooms)
-        val validTermIds = validators.Term.getIds(group, rt.allTerms, rt.timetable, rt.teacherMap)
-
-        val validRoomTimes = rt.remainingRoomTimes.filter({
-          case (roomId, termId) => validRoomIds.contains(roomId) && validTermIds.contains(termId)
-        })
-
-        if (validRoomTimes.isEmpty) {
-          throw scheduler.SchedulerException("No room time to pick from!")
-        }
-
-        val validRoomTimesByNum: Seq[Seq[(String, String)]] =
-          rt.getRemainingRoomTimesByNum(validRoomTimes, group.terms_num)
-
-        if (validRoomTimesByNum.isEmpty) {
-          throw scheduler.SchedulerException("No num room time to pick from!")
-        }
-
-        val newRoomTimes = validRoomTimesByNum(ScalaRandom.nextInt(validRoomTimesByNum.size))
-        newRoomTimes
+        val validRoomTimesByNum = getValidRoomTimesByNum(group, rt)
+        validRoomTimesByNum(ScalaRandom.nextInt(validRoomTimesByNum.size))
     }
   }
-
-  def orderGroups(groups: Seq[docs.Group], rt: RoomTimes): Future[Seq[docs.Group]]
 
   def doWork(
     task: docs.Task,
@@ -59,7 +79,14 @@ abstract class RandomBase extends Base with Logging {
     val rt = RoomTimes(rooms, terms, teachers)
     val lastRt = groups.foldLeft(rt) {
       case (oldRt, group) =>
-        val newTimes = drawRandomRoomTimes(group, oldRt)
+        val newTimes = getRoomTimes(
+          group, oldRt, task._id,
+          groups.map { x => (x._id, x)} toMap,
+          teachers.map { x => (x._id, x)} toMap,
+          rooms.map { x => (x._id, x)} toMap,
+          terms.map { x => (x._id, x)} toMap,
+          labels.map { x => (x._id, x)} toMap
+        )
         newTimes.foldLeft(oldRt)({ case (newRt, newTime) => newRt.transition(group, newTime)})
     }
     val newDoc = task.finish(lastRt.timetable)

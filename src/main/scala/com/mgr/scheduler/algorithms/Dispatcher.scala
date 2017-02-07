@@ -10,15 +10,26 @@ import com.mgr.thrift.scheduler
 
 object Dispatcher extends Base {
 
-  val classMapper = Map(
-    scheduler.Algorithm.Random.name.toLowerCase -> Random,
-    scheduler.Algorithm.RandomOrderedGroups.name.toLowerCase -> RandomOrderedGroups
-  )
+  def getAlgorithm(algorithm: String): Future[Base] = {
+    algorithm match {
+      case x if x == scheduler.Algorithm.Random.name.toLowerCase => Future.value(Random())
+      case x if x == scheduler.Algorithm.RandomOrderedGroups.name.toLowerCase =>
+        Future.value(RandomOrderedGroups())
+      case x if x == scheduler.Algorithm.DecideWithRatingFunction.name.toLowerCase =>
+        couchClient.get[docs.Rating](docs.Rating.getCouchId("default")) map {
+          case None => throw scheduler.SchedulerException("no default rating schema")
+          case Some(rating) =>
+            DecideWithRatingFunction(rating)
+        }
+    }
+  }
 
   def start(task: docs.Task): Future[Unit] = {
-    classMapper.get(task.algorithm).get().start(task) flatMap { _ =>
-      Future.sleep(2.seconds)(new JavaTimer(true)) map { _ =>
-        RatingHandler.countRatingHelper(task._id)
+    getAlgorithm(task.algorithm) flatMap { algorithm: Base =>
+      algorithm.start(task) flatMap { _ =>
+        Future.sleep(2.seconds)(new JavaTimer(true)) map { _ =>
+          RatingHandler.countRatingHelper(task._id)
+        }
       }
     }
   }

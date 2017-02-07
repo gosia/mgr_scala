@@ -155,7 +155,8 @@ struct TaskRatingHelper {
 enum Algorithm {
   RANDOM,
   MANUAL,
-  RANDOM_ORDERED_GROUPS
+  RANDOM_ORDERED_GROUPS,
+  DECIDE_WITH_RATING_FUNCTION
 }
 
 enum TaskStatus {

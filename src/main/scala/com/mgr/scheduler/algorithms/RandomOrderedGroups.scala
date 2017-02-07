@@ -24,4 +24,14 @@ case class RandomOrderedGroups() extends RandomBase {
     Future.value(groups.map(mapF).sortWith(_._2 < _._2).map(_._1))
   }
 
+  def getRoomTimes(
+    group: docs.Group, rt: RoomTimes,
+    taskId: String,
+    groupsMap: Map[String, docs.Group],
+    teachersMap: Map[String, docs.Teacher],
+    roomsMap: Map[String, docs.Room],
+    termsMap: Map[String, docs.Term],
+    labelsMap: Map[String, docs.Label]
+  ): Seq[(String, String)] = drawRoomTimes(group, rt)
+
 }
