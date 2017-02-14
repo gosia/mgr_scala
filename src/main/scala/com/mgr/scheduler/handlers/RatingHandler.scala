@@ -132,7 +132,7 @@ object RatingHandler extends Logging  with Couch {
     roomsMap: Map[String, docs.Room],
     termsMap: Map[String, docs.Term],
     labelsMap: Map[String, docs.Label]
-  ) = {
+  ): docs.TaskRatingHelper = {
 
     val groupToTimetable: Map[String, Seq[docs.GroupRoomTerm]] = timetable.groupBy(_.group)
 

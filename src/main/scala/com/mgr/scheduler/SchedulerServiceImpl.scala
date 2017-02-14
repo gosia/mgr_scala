@@ -1,16 +1,13 @@
 package com.mgr.scheduler
 
+import com.twitter.logging.Logger
 import com.twitter.util.Future
 
 import com.mgr.scheduler.config.SchedulerServiceConfig
 import com.mgr.thrift.scheduler
 
-class SchedulerServiceImpl(
-  implicit val config: SchedulerServiceConfig
-) extends scheduler.SchedulerService.ThriftServer {
-  val serverName = "Scheduler"
-  val thriftPort = config.thriftPort
-  override val tracerFactory = config.tracerFactory
+trait ExceptionsHandler {
+  val log: Logger
 
   def exceptions: PartialFunction[Throwable, Nothing] = {
     case e @ (_: scheduler.SchedulerException | _: scheduler.ValidationException) => throw e
@@ -20,7 +17,10 @@ class SchedulerServiceImpl(
       log.warning(message)
       throw scheduler.SchedulerException(message)
   }
+}
 
+
+trait ConfigServiceImpl extends ExceptionsHandler {
   def createConfig(
     info: scheduler.ConfigCreationInfo,
     terms: Seq[scheduler.Term],
@@ -80,6 +80,9 @@ class SchedulerServiceImpl(
       toConfigId, fromConfigId, elementsType
     ) handle exceptions
   }
+}
+
+trait TaskServiceImpl extends ExceptionsHandler {
 
   def getTasks(configIdOpt: Option[String]): Future[Seq[scheduler.TaskInfo]] = {
     handlers.TaskHandler.getTasks(configIdOpt) handle exceptions
@@ -109,14 +112,6 @@ class SchedulerServiceImpl(
     handlers.TaskHandler.deleteTask(taskId) handle exceptions
   }
 
-  def recountTaskRatingHelper(taskId: String): Future[Unit] = {
-    handlers.RatingHandler.countRatingHelper(taskId) handle exceptions
-  }
-
-  def getTaskRatingHelper(taskId: String): Future[scheduler.TaskRatingHelper] = {
-    handlers.RatingHandler.getRatingHelper(taskId) handle exceptions
-  }
-
   def addTaskEvent(
     taskId: String, groupId: String, point: scheduler.Point
   ): Future[scheduler.Timetable] = {
@@ -128,11 +123,9 @@ class SchedulerServiceImpl(
   ): Future[scheduler.Timetable] = {
     handlers.TaskHandler.removeEvent(taskId, groupId) handle exceptions
   }
+}
 
-  def getGroupBusyTerms(taskId: String, groupId: String): Future[Seq[String]] = {
-    handlers.TaskHandler.getGroupBusyTerms(taskId, groupId) handle exceptions
-  }
-
+trait FileServiceImpl extends ExceptionsHandler {
   def createFile(info: scheduler.FileCreationInfo): Future[scheduler.File] = {
     handlers.FileHandler.create(info) handle exceptions
   }
@@ -153,7 +146,31 @@ class SchedulerServiceImpl(
   def linkFile(fileId: String): Future[scheduler.FileBasicInfo] = {
     handlers.FileHandler.link(fileId) handle exceptions
   }
+}
 
+trait RatingServiceImpl extends ExceptionsHandler {
+  def recountTaskRatingHelper(taskId: String): Future[Unit] = {
+    handlers.RatingHandler.countRatingHelper(taskId) handle exceptions
+  }
+
+  def getTaskRatingHelper(taskId: String): Future[scheduler.TaskRatingHelper] = {
+    handlers.RatingHandler.getRatingHelper(taskId) handle exceptions
+  }
+
+  def saveRating(rating: scheduler.Rating): Future[Unit] =
+    handlers.RatingHandler.save(rating) handle exceptions
+
+  def deleteRating(ratingId: String): Future[Unit] =
+    handlers.RatingHandler.delete(ratingId) handle exceptions
+
+  def getRating(ratingId: String): Future[scheduler.Rating] =
+    handlers.RatingHandler.get(ratingId) handle exceptions
+
+  def getRatings(): Future[Seq[scheduler.Rating]] =
+    handlers.RatingHandler.list() handle exceptions
+}
+
+trait VotesServiceImpl extends ExceptionsHandler {
   def listConfigVotes(): Future[Seq[scheduler.UsersVotes]] = {
     handlers.VoteHandler.list() handle exceptions
   }
@@ -172,17 +189,18 @@ class SchedulerServiceImpl(
   def deleteConfigVotes(configId: String): Future[Unit] = {
     handlers.VoteHandler.delete(configId) handle exceptions
   }
+}
 
-  def saveRating(rating: scheduler.Rating): Future[Unit] =
-    handlers.RatingHandler.save(rating) handle exceptions
+class SchedulerServiceImpl(
+  implicit val config: SchedulerServiceConfig
+) extends scheduler.SchedulerService.ThriftServer with ExceptionsHandler with ConfigServiceImpl
+  with TaskServiceImpl with FileServiceImpl with RatingServiceImpl with VotesServiceImpl {
+  val serverName = "Scheduler"
+  val thriftPort = config.thriftPort
+  override val tracerFactory = config.tracerFactory
 
-  def deleteRating(ratingId: String): Future[Unit] =
-    handlers.RatingHandler.delete(ratingId) handle exceptions
-
-  def getRating(ratingId: String): Future[scheduler.Rating] =
-    handlers.RatingHandler.get(ratingId) handle exceptions
-
-  def getRatings(): Future[Seq[scheduler.Rating]] =
-    handlers.RatingHandler.list() handle exceptions
+  def getGroupBusyTerms(taskId: String, groupId: String): Future[Seq[String]] = {
+    handlers.TaskHandler.getGroupBusyTerms(taskId, groupId) handle exceptions
+  }
 
 }
