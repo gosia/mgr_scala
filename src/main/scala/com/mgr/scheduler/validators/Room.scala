@@ -10,7 +10,10 @@ object Room extends Logging {
   }
 
   def validRoomLabel(group: docs.Group, rooms: Seq[docs.Room]): Set[String] = {
-    rooms.filter({r: docs.Room => (r.labels intersect group.labels).nonEmpty }).map(_._id).toSet
+    rooms
+      .filter({r: docs.Room => (r.labels intersect group.getRoomLabels.flatten).nonEmpty })
+      .map(_._id)
+      .toSet
   }
 
   def getIds(group: docs.Group, rooms: Seq[docs.Room]): Set[String] = {

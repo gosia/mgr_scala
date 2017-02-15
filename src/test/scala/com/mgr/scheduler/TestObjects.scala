@@ -50,7 +50,7 @@ object TestObjects {
     id="group1id",
     teachers=Seq(teacher1._id),
     terms=Seq(term1._id, term2._id),
-    labels=Seq("wyklad"),
+    roomLabels=Seq(Seq("wyklad")),
     diffTermGroups = Seq(),
     sameTermGroups = Seq(),
     termsNum = 2,

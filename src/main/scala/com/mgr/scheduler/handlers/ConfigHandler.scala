@@ -86,7 +86,9 @@ object ConfigHandler extends Logging  with Couch {
       val groupDocs = groups map { docs.Group(id, _) }
       val configDoc = docs.Config(_id=id, year=info.year, term=info.term.name.toLowerCase)
 
-      val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
+      val labelIds = (
+        rooms.map(_.labels) ++ groups.map(_.roomLabels.flatten)
+      ).foldLeft(Set.empty[String])({
         case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
       }) toSeq
       val labelDocs = labelIds map { docs.Label(id, _) }
@@ -253,7 +255,9 @@ object ConfigHandler extends Logging  with Couch {
           docs.Group(configId, _)
         }
 
-        val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
+        val labelIds = (
+          rooms.map(_.labels) ++ groups.map(_.roomLabels.flatten)
+        ).foldLeft(Set.empty[String])({
           case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
         }) toSeq
         val labelDocs = labelIds map {
@@ -321,12 +325,14 @@ object ConfigHandler extends Logging  with Couch {
             docs.Group(configId, x)
               .copy(_rev = exGroups.getOrElse(docs.Group.getCouchId(configId, x.id), throw ex)._rev)
           }
-          val labelIds = (rooms.map(_.labels) ++ groups.map(_.labels)).foldLeft(Set.empty[String])({
+          val labelIds = (
+            rooms.map(_.labels) ++ groups.map(_.roomLabels.flatten)
+          ).foldLeft(Set.empty[String])({
             case (s: Set[String], labels: Seq[String]) => s ++ labels.toSet
           }) toSeq
           val labelDocs = labelIds map { x =>
             docs.Label(configId, x)
-              .copy(_rev = exLabels.get(docs.Label.getCouchId(configId, x)).map(_._rev).flatten)
+              .copy(_rev = exLabels.get(docs.Label.getCouchId(configId, x)).flatMap(_._rev))
           }
 
           val termIds = termDocs.map(_._id).toSet
@@ -514,12 +520,12 @@ object ConfigHandler extends Logging  with Couch {
               val newTeachers = fromTeachers map { _.editConfig(toConfigId) }
               val newTermIds: Seq[String] = elementsType match {
                 case "term" => fromTerms map { _.getRealId }
-                case "teacher" => fromTeachers map { t: docs.Teacher => t.terms map {
+                case "teacher" => fromTeachers flatMap { t: docs.Teacher => t.terms map {
                   x: String => docs.Term.getRealId(x)
-                } } flatten
-                case "room" => fromRooms map { r: docs.Room => r.terms map {
+                } }
+                case "room" => fromRooms flatMap { r: docs.Room => r.terms map {
                   x: String => docs.Term.getRealId(x)
-                } } flatten
+                } }
               }
               val newTermIdsSet = newTermIds.toSeq
               val newTerms = fromTerms filter {

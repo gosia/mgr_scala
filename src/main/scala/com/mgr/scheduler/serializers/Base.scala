@@ -20,14 +20,14 @@ trait Base extends Logging with Couch {
   val configId1: String = s"$fileId-1"
   val configId2: String = s"$fileId-2"
 
-  def allTermsF(configId: String): Seq[docs.Term] = (0 to 4).map({ day =>
+  def allTermsF(configId: String): Seq[docs.Term] = (0 to 4).flatMap({ day =>
     (8 to 21).map { hour =>
       (day == 0 && hour < 12) || (day == 4 && hour >= 12) match {
         case true => None
         case false => Some(docs.Term.forIi(configId, day, hour))
       }
     }
-  }).flatten.flatten
+  }).flatten
 
   val allTerms: Map[String, Seq[docs.Term]] = Map(
     configId1 -> allTermsF(configId1),
@@ -39,7 +39,6 @@ trait Base extends Logging with Couch {
     "r|103|38|wyklad,cwiczenia,103",
     "r|104|32|wyklad,cwiczenia,104",
     "r|105|32|wyklad,cwiczenia,105",
-    "r|106|12|pracownia,106",
     "r|107|20|pracownia,107",
     "r|108|20|pracownia,108",
     "r|109|20|pracownia,109",
@@ -76,14 +75,14 @@ trait Base extends Logging with Couch {
   }
 
   private def getLabelDocs(configId: String): Seq[docs.Label] = {
-    defaultRooms map { room =>
+    defaultRooms flatMap { room =>
       val parts = room.split("\\|", -1)
       val labels = parts(3).split(",")
 
       labels map { label =>
         docs.Label(configId, label)
       }
-    } flatten
+    }
   }
 
   private def diffTermGroups(

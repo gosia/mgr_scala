@@ -14,43 +14,52 @@ final case class Group(
   config_id: String,
 
   diff_term_groups: Seq[String],
-  labels: Seq[String],
   same_term_groups: Seq[String],
   teachers: Seq[String],
   terms: Seq[String],
   terms_num: Int,
   students_num: Int,
+  room_labels: Option[Seq[Seq[String]]],
+  labels: Option[Seq[String]], // deprecated: use room_labels
 
   extra: GroupExtra,
 
   `type`: String = Group.`type`
 ) extends Base {
 
+  def getRoomLabels: Seq[Seq[String]] = labels match {
+    case Some(xs) => Seq(xs)
+    case None => room_labels.getOrElse(Seq())
+  }
+
   def isValid(
     validTerms: Set[String], validLabels: Set[String], validGroups: Set[String],
     validTeachers: Set[String]
-  ): (Option[String], Boolean) =
+  ): (Option[String], Boolean) = {
+    val labels: Set[String] = room_labels.getOrElse(Seq()).flatten.toSet
+
     if (
       (terms.toSet -- validTerms).isEmpty &&
-      (labels.toSet -- validLabels).isEmpty &&
-      (diff_term_groups.toSet -- validGroups).isEmpty &&
-      (same_term_groups.toSet -- validGroups).isEmpty &&
-      (teachers.toSet -- validTeachers).isEmpty
+        (labels -- validLabels).isEmpty &&
+        (diff_term_groups.toSet -- validGroups).isEmpty &&
+        (same_term_groups.toSet -- validGroups).isEmpty &&
+        (teachers.toSet -- validTeachers).isEmpty
     ) {
       (None, true)
     } else {
       val unknownTerms = (terms.toSet -- validTerms).mkString(", ")
-      val unknownLabels = (labels.toSet -- validLabels).mkString(", ")
+      val unknownLabels = (labels -- validLabels).mkString(", ")
       val unknownGroups = (diff_term_groups.toSet ++ same_term_groups.toSet) -- validGroups
       val unknownTeachers = (teachers.toSet -- validTeachers) -- validGroups
       (
         Some(
           s"Group $getRealId is not valid (unknown labels: <$unknownLabels>, " +
-          s"unknown terms: <$unknownTerms>, unknown groups: <$unknownGroups>), " +
-          s"unknown teachers: <$unknownTeachers>"
+            s"unknown terms: <$unknownTerms>, unknown groups: <$unknownGroups>), " +
+            s"unknown teachers: <$unknownTeachers>"
         ), false
       )
     }
+  }
 
   def toTxt: String = {
     s"${extra.course} (${extra.group_type})"
@@ -60,7 +69,7 @@ final case class Group(
     id=this.getRealId,
     teachers=this.teachers.map(Teacher.getRealId),
     terms=this.terms.map(Term.getRealId),
-    labels=this.labels.map(Label.getRealId),
+    roomLabels=this.getRoomLabels.map(_.map(Label.getRealId)),
     diffTermGroups=this.diff_term_groups.map(Group.getRealId),
     sameTermGroups=this.same_term_groups.map(Group.getRealId),
     termsNum=this.terms_num.toShort,
@@ -81,7 +90,8 @@ object Group extends BaseObj {
     _id = Group.getCouchId(configId, group.id),
     config_id = configId,
     terms = group.terms map { Term.getCouchId(configId, _) },
-    labels = group.labels map { Label.getCouchId(configId, _) },
+    room_labels = Some(group.roomLabels map { _.map(l => Label.getCouchId(configId, l)) }),
+    labels = None,
     teachers = group.teachers map { Teacher.getCouchId(configId, _) },
     terms_num = group.termsNum,
     diff_term_groups = group.diffTermGroups map { Group.getCouchId(configId, _) },

@@ -74,7 +74,7 @@ struct Group {
   1: Id id;
   2: list<string> teachers;
   3: list<string> terms;
-  4: list<string> labels;
+  4: list<list<string>> room_labels;
   5: list<string> diff_term_groups;
   6: list<string> same_term_groups;
   7: i16 terms_num;

@@ -91,33 +91,33 @@ class LineSeq(xs: Seq[Line]) {
     }
   }
 
-  def teachers1: Seq[docs.Teacher] = xs map {
+  def teachers1: Seq[docs.Teacher] = xs flatMap {
     case EmptyLine(l) => None
     case TeacherLine(doc1, doc2) => Some(doc1)
     case GroupLine(_, _) => None
-  } flatten
-  def teachers2: Seq[docs.Teacher] = xs map {
+  }
+  def teachers2: Seq[docs.Teacher] = xs flatMap {
     case EmptyLine(l) => None
     case TeacherLine(doc1, doc2) => Some(doc2)
     case GroupLine(_, _) => None
-  } flatten
+  }
 
-  def groups1: Seq[docs.Group] = xs map {
+  def groups1: Seq[docs.Group] = xs flatMap {
     case EmptyLine(_) => None
     case TeacherLine(_, _) => None
     case GroupLine(doc, term) => term match {
       case "winter" => Some(doc)
       case _ => None
     }
-  } flatten
-  def groups2: Seq[docs.Group] = xs map {
+  }
+  def groups2: Seq[docs.Group] = xs flatMap {
     case EmptyLine(_) => None
     case TeacherLine(_, _) => None
     case GroupLine(doc, term) => term match {
       case "summer" => Some(doc)
       case _ => None
     }
-  } flatten
+  }
 }
 
 trait Linear {

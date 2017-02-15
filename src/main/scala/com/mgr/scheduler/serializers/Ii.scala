@@ -78,14 +78,14 @@ trait IiLinear extends datastructures.Linear {
     }
   }
 
-  private def allTerms(configId: String): Seq[docs.Term] = (0 to 4).map({ day =>
+  private def allTerms(configId: String): Seq[docs.Term] = (0 to 4).flatMap({ day =>
     (8 to 21).map { hour =>
       (day == 0 && hour < 12) || (day == 4 && hour >= 12) match {
         case true => None
         case false => Some(docs.Term.forIi(configId, day, hour))
       }
     }
-  }).flatten.flatten
+  }).flatten
   private def allTermIds(configId: String): Seq[String] = {
     allTerms(configId) map { _._id }
   }
@@ -107,15 +107,15 @@ trait IiLinear extends datastructures.Linear {
     )
   }
 
-  private def roomLabels(configId: String): Map[String, Seq[String]] = Map(
-    "w" -> Seq("wyklad"),
-    "e" -> Seq("wyklad"),
-    "c" -> Seq("cwiczenia"),
-    "p" -> Seq("pracownia"),
-    "r" -> Seq("cwiczenia", "pracownia"),
-    "s" -> Seq("cwiczenia"),
-    "l" -> Seq("pracownia")
-  ).mapValues { xs => xs.map(docs.Label.getCouchId(configId, _)) }
+  private def roomLabels(configId: String): Map[String, Seq[Seq[String]]] = Map(
+    "w" -> Seq(Seq("wyklad")),
+    "e" -> Seq(Seq("wyklad")),
+    "c" -> Seq(Seq("cwiczenia")),
+    "p" -> Seq(Seq("pracownia")),
+    "r" -> Seq(Seq("cwiczenia"), Seq("pracownia")),
+    "s" -> Seq(Seq("cwiczenia")),
+    "l" -> Seq(Seq("pracownia"))
+  ).mapValues { xs => xs.map(_.map(l => docs.Label.getCouchId(configId, l))) }
 
   private def getGroupDoc(line: String, configId: String): docs.Group = {
     val p = line.split("\\|", -1)
@@ -137,7 +137,8 @@ trait IiLinear extends datastructures.Linear {
       _id = id,
       config_id = configId,
       diff_term_groups = Seq(), // TODO(gosia): this needs to be done
-      labels = roomLabels(configId).getOrElse(groupType, Seq()),
+      room_labels = Some(roomLabels(configId).getOrElse(groupType, Seq())),
+      labels = None,
       same_term_groups = Seq(),
       teachers = Seq(docs.Teacher.getCouchId(configId, teacherId)),
       terms = allTermIds(configId),
