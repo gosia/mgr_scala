@@ -74,9 +74,9 @@ object RoomTimes extends Logging {
     num: Int
   ): Seq[Seq[(String, String)]] = {
     val termsMap = terms.map(t => (t._id, t)).toMap
-    val roomsMap: Map[String, Seq[docs.Term]] = rooms.map(
+    val roomsMap: Map[String, Seq[docs.Term]] = rooms.flatMap(
       r => r.terms.map(t => (r._id, termsMap(t)))
-    ).flatten.groupBy(_._1).mapValues(
+    ).groupBy(_._1).mapValues(
       _.filter(x => remainingRoomTimes.exists(y => y._1 == x._1 && y._2 == x._2._id)).map(_._2)
     )
 

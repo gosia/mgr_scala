@@ -13,33 +13,46 @@ import com.mgr.utils.logging.Logging
 
 
 abstract class RandomBase extends Base with Logging {
-  def getValidRoomTimes(group: docs.Group, rt: RoomTimes): Seq[(String, String)] = {
-    val validRoomIds = validators.Room.getIds(group, rt.rooms)
+
+  def getValidRoomTimes(group: docs.Group, rt: RoomTimes): Seq[Seq[(String, String)]] = {
+    val validRoomIdsGroups: Seq[Set[String]] = validators.Room.getIds(group, rt.rooms)
     val validTermIds = validators.Term.getIds(group, rt.allTerms, rt.timetable, rt.teacherMap)
 
-    val validRoomTimes = rt.remainingRoomTimes.filter({
-      case (roomId, termId) => validRoomIds.contains(roomId) && validTermIds.contains(termId)
+    validRoomIdsGroups.map({ validRoomIds =>
+      rt.remainingRoomTimes.filter({
+        case (roomId, termId) => validRoomIds.contains(roomId) && validTermIds.contains(termId)
+      })
     })
-
-    validRoomTimes
   }
 
   def getValidRoomTimesByNum(group: docs.Group, rt: RoomTimes): Seq[Seq[(String, String)]] = {
 
-    val validRoomTimes = getValidRoomTimes(group, rt)
+    val validRoomTimesGroups: Seq[Seq[(String, String)]] = getValidRoomTimes(group, rt)
 
-    if (validRoomTimes.isEmpty) {
+    if (validRoomTimesGroups.isEmpty || validRoomTimesGroups.exists(_.isEmpty)) {
       throw scheduler.SchedulerException("No room time to pick from!")
     }
 
-    val validRoomTimesByNum: Seq[Seq[(String, String)]] =
-      rt.getRemainingRoomTimesByNum(validRoomTimes, group.terms_num)
+    val validRoomTimesByNumGroups: Seq[Seq[Seq[(String, String)]]] = validRoomTimesGroups.map({
+      validRoomTimes => rt.getRemainingRoomTimesByNum(validRoomTimes, group.terms_num)
+    })
 
-    if (validRoomTimesByNum.isEmpty) {
+    if (validRoomTimesByNumGroups.isEmpty || validRoomTimesByNumGroups.exists(_.isEmpty)) {
       throw scheduler.SchedulerException("No num room time to pick from!")
     }
 
-    validRoomTimesByNum
+    validRoomTimesByNumGroups.reduceLeft[Seq[Seq[(String, String)]]] {
+      case (prev, validRoomTimesByNum: Seq[Seq[(String, String)]]) =>
+
+        validRoomTimesByNum.flatMap({ validRoomTimeByNum: Seq[(String, String)] =>
+          val currentTermIds = validRoomTimeByNum.map(_._2).toSet
+          val canAddTo: Seq[Seq[(String, String)]] = prev.filter({
+            xs => xs.map(_._2).toSet.diff(currentTermIds).isEmpty
+          })
+          canAddTo.map({ _ ++ validRoomTimeByNum})
+        })
+    }
+
   }
 
   def orderGroups(groups: Seq[docs.Group], rt: RoomTimes): Future[Seq[docs.Group]]

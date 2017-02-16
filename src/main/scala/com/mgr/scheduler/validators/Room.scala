@@ -9,14 +9,17 @@ object Room extends Logging {
     rooms.filter({r: docs.Room => group.students_num <= r.capacity }).map(_._id).toSet
   }
 
-  def validRoomLabel(group: docs.Group, rooms: Seq[docs.Room]): Set[String] = {
+  def validRoomLabel(labels: Seq[String], rooms: Seq[docs.Room]): Set[String] = {
     rooms
-      .filter({r: docs.Room => (r.labels intersect group.getRoomLabels.flatten).nonEmpty })
+      .filter({r: docs.Room => (r.labels intersect labels).nonEmpty })
       .map(_._id)
       .toSet
   }
 
-  def getIds(group: docs.Group, rooms: Seq[docs.Room]): Set[String] = {
-    validRoomCapacity(group, rooms) & validRoomLabel(group, rooms)
+  def getIds(group: docs.Group, rooms: Seq[docs.Room]): Seq[Set[String]] = {
+    group.getRoomLabels.map({ labels =>
+      validRoomCapacity(group, rooms) & validRoomLabel(labels, rooms)
+    })
+
   }
 }

@@ -146,23 +146,30 @@ object TaskHandler extends Logging with Couch {
               roomQ.execute flatMap { roomR: ViewResult =>
                 val rooms = roomR.docs[docs.Room]
 
-                val validRoomIds = validators.Room.getIds(group, rooms) filter { roomId =>
-                  task.timetable.map(xs =>
-                    !xs.exists(x => x.room == roomId && eventTermIdsSet.contains(x.term))
-                  ).getOrElse(true)
-                }
+                val validRoomIdGroups: Seq[Set[String]] = validators.Room.getIds(group, rooms).map(
+                  _.filter { roomId =>
+                    task.timetable.map(xs =>
+                     !xs.exists(x => x.room == roomId && eventTermIdsSet.contains(x.term))
+                    ).getOrElse(true)
+                  }
+                )
 
-                if (validRoomIds.size == 0) {
+                if (validRoomIdGroups.isEmpty) {
                   throw scheduler.ValidationException("Brak wolnej sali w podanym terminie")
                 }
-                val roomId = validRoomIds.head
 
-                val newTimetableObjects = eventTermIdsSet.map(
-                  termId => docs.GroupRoomTerm(
-                    docs.Group.getCouchId(task.config_id, groupId),
-                    roomId,
-                    docs.Term.getCouchId(task.config_id, termId)
-                  )
+                val newTimetableObjects: Seq[docs.GroupRoomTerm] = eventTermIdsSet.flatMap(
+                  termId => {
+                    validRoomIdGroups.map( validRoomIds => {
+                      val roomId = validRoomIds.head
+
+                      docs.GroupRoomTerm(
+                        docs.Group.getCouchId(task.config_id, groupId),
+                        roomId,
+                        docs.Term.getCouchId(task.config_id, termId)
+                      )
+                    })
+                  }
                 ).toSeq
                 val newTask = task.extendTimetable(newTimetableObjects)
                 couchClient.update(newTask) map {
@@ -210,18 +217,18 @@ object TaskHandler extends Logging with Couch {
               g.teachers.toSet.intersect(group.teachers.toSet).nonEmpty
             })).getOrElse(Seq())
 
-            val conflictingTermsForTeacher = group.teachers.map(t => {
+            val conflictingTermsForTeacher = group.teachers.flatMap(t => {
               val teacher = exTeachers(t)
               allTerms -- teacher.terms.toSet
-            }).flatten
+            })
 
-            val validRoomsForGroup = validators.Room.getIds(group, exRooms.values.toSeq)
+            val validRoomsForGroup: Seq[Set[String]] = validators.Room.getIds(group, exRooms.values.toSeq)
             val roomsCount = validRoomsForGroup.size
             val conflictingTermsForRooms: Seq[String] = task.timetable.map({ timetable =>
 
               // rooms busy by timetable
               val busyRoomsByTimetable = timetable.filter(x =>
-                validRoomsForGroup.contains(x.room)
+                validRoomsForGroup.flatten.contains(x.room)
               ).foldLeft[Map[String, Set[String]]](Map())({ case (m, x) =>
                 m.get(x.term) match {
                   case None => m + (x.term -> Set(x.room))
@@ -230,10 +237,10 @@ object TaskHandler extends Logging with Couch {
               })
 
               // add rooms busy by no valid terms
-              val busyRooms: Map[String, Set[String]] = validRoomsForGroup.map(x => {
+              val busyRooms: Map[String, Set[String]] = validRoomsForGroup.flatten.flatMap(x => {
                 val wrongTerms = allTerms -- exRooms(x).terms
                 wrongTerms.map((_, x))
-              }).flatten.foldLeft(busyRoomsByTimetable)({ case (m, x) =>
+              }).foldLeft(busyRoomsByTimetable)({ case (m, x) =>
                 m.get(x._1) match {
                   case None => m + (x._1 -> Set(x._2))
                   case Some(s) => m + (x._1 -> (s + x._2))

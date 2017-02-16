@@ -9,7 +9,7 @@ class ValidationUnitSpecX extends SpecificationWithJUnit {
     "check room labels" in {
 
       val result = validators.Room.validRoomLabel(
-        TestObjects.group1, Seq(TestObjects.room1, TestObjects.room2)
+        TestObjects.group1.getRoomLabels.flatten, Seq(TestObjects.room1, TestObjects.room2)
       )
       val expected = Set()
 
