@@ -222,7 +222,9 @@ object TaskHandler extends Logging with Couch {
               allTerms -- teacher.terms.toSet
             })
 
-            val validRoomsForGroup: Seq[Set[String]] = validators.Room.getIds(group, exRooms.values.toSeq)
+            val validRoomsForGroup: Seq[Set[String]] = validators.Room.getIds(
+              group, exRooms.values.toSeq
+            )
             val roomsCount = validRoomsForGroup.size
             val conflictingTermsForRooms: Seq[String] = task.timetable.map({ timetable =>
 

@@ -179,7 +179,23 @@ object RatingHandler extends Logging  with Couch {
         maxTime minus minTime
       })})
 
-     docs.TaskRatingHelper(
+    val gapHours: Map[String, Map[String, Int]] = timetable
+      .flatMap({ grt: docs.GroupRoomTerm =>
+        val teachers = groupsMap(grt.group).teachers
+        teachers.map({ teacher => (teacher, grt.term) })
+      })
+      .groupBy(_._1)
+      .mapValues(xs => xs.map({ x => termsMap(x._2) }).toSet)
+      .mapValues({ xs => xs
+        .groupBy({ x => scheduler.Day.valueOf(x.day).get.value.toString })
+        .mapValues({ xs =>
+          val max: Int = xs.maxBy(_.start.hour).start.hour
+          val min: Int = xs.minBy(_.start.hour).start.hour
+          max - min - xs.size + 1
+        })
+      })
+
+    docs.TaskRatingHelper(
       _id=docs.TaskRatingHelper.getCouchId(taskId),
       _rev=None,
       term_rating_helper = docs.TermRatingHelper(
@@ -192,7 +208,8 @@ object RatingHandler extends Logging  with Couch {
       teacher_rating_helper = docs.TeacherRatingHelper(
         hourInWorkTeachers.map({
           case (k1, v1) => (k1, v1.map({ case (k2, v2) => (k2.toString, v2) }))
-        })
+        }),
+        Some(gapHours)
       )
     )
   }

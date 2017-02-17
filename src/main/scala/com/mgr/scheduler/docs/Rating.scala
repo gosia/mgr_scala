@@ -7,16 +7,17 @@ import com.mgr.utils.logging.Logging
 final case class RatingWeights(
   term_rating: Int,
   room_rating: Int,
-  teacher_rating: Int
+  teacher_rating: Int,
+  student_rating: Option[Int]
 ) {
   def toThrift: scheduler.RatingWeights = scheduler.RatingWeights(
-    term_rating, room_rating, teacher_rating
+    term_rating, room_rating, teacher_rating, student_rating.getOrElse(0)
   )
 }
 
 object RatingWeights {
   def apply(r: scheduler.RatingWeights): RatingWeights = RatingWeights(
-    r.termRating, r.roomRating, r.teacherRating
+    r.termRating, r.roomRating, r.teacherRating, Some(r.studentRating)
   )
 }
 
@@ -59,12 +60,14 @@ object RoomRating {
 final case class TeacherRating(
   total_hours_in_work: Map[String, Int],
   no_work_days_num: Map[String, Int],
+  gap_hours: Option[Map[String, Int]],
   no_work_days_on_mon_fri: Int
 ) {
   def toThrift: scheduler.TeacherRating = scheduler.TeacherRating(
     total_hours_in_work.map({ case (k, v) => (k.toInt, v)}),
     no_work_days_num.map({ case (k, v) => (k.toInt, v)}),
-    no_work_days_on_mon_fri
+    no_work_days_on_mon_fri,
+    gap_hours.getOrElse(Map()).map({ case (k, v) => (k.toInt, v)})
   )
 }
 
@@ -72,6 +75,7 @@ object TeacherRating {
   def apply(r: scheduler.TeacherRating): TeacherRating = TeacherRating(
     r.totalHoursInWork.toMap.map({ case (k, v) => (k.toString, v)}),
     r.noWorkDaysNum.toMap.map({ case (k, v) => (k.toString, v)}),
+    Some(r.gapHours.toMap.map({ case (k, v) => (k.toString, v)})),
     r.noWorkDaysOnMonFri
   )
 }

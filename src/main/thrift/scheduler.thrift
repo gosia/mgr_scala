@@ -119,12 +119,14 @@ struct TeacherRating {
   1: map<i32, Points> total_hours_in_work;
   2: map<i32, Points> no_work_days_num;
   3: Points no_work_days_on_mon_fri;
+  4: map<i32, Points> gap_hours;
 }
 
 struct RatingWeights {
   1: Points term_rating;
   2: Points room_rating;
   3: Points teacher_rating;
+  4: Points student_rating;
 }
 
 struct Rating {
@@ -144,6 +146,7 @@ struct RoomRatingHelper {
 }
 struct TeacherRatingHelper {
   1: map<string, map<string, i32>> hours_in_work;
+  2: map<string, map<string, i32>> gap_hours;
 }
 
 struct TaskRatingHelper {

@@ -22,10 +22,12 @@ final case class RoomRatingHelper(
 }
 
 final case class TeacherRatingHelper(
-  hours_in_work: Map[String, Map[String, Int]] // teacher -> day -> hours in work
+  hours_in_work: Map[String, Map[String, Int]], // teacher -> day -> hours in work
+  gap_hours: Option[Map[String, Map[String, Int]]] // teacher -> day -> gap hours
 ) {
   def toThrift: scheduler.TeacherRatingHelper = scheduler.TeacherRatingHelper(
-    hours_in_work.map({case (k1, v1) => (Teacher.getRealId(k1), v1)})
+    hours_in_work.map({case (k1, v1) => (Teacher.getRealId(k1), v1)}),
+    gap_hours.getOrElse(Map()).map({case (k1, v1) => (Teacher.getRealId(k1), v1)})
   )
 }
 

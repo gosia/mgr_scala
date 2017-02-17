@@ -11,9 +11,13 @@ case class TaskRating(
 ) {
 
   private def getSectionPoints(sections: Map[String, Int], value: Int): Int = {
-    val intSections = sections.map({case (num, points) => (num.toInt, points) })
-    val key = intSections.keys.filter(x => x < value).max
-    intSections(key)
+    sections.size match {
+      case 0 => 0
+      case _ =>
+        val intSections = sections.map({case (num, points) => (num.toInt, points) })
+        val key = intSections.keys.filter(x => x < value).max
+        intSections(key)
+    }
   }
 
   private def getSectionMaxPoints(sections: Map[String, Int]): Int = {
@@ -45,13 +49,18 @@ case class TaskRating(
           (day, points)
         }).values.sum
 
+        val gapHoursPoints = teacherMap.map({ case (day, gapHours) =>
+          val points = getSectionPoints(rating.teacher_rating.gap_hours.getOrElse(Map()), gapHours)
+          (day, points)
+        }).values.sum
+
         val daysInWork = teacherMap.count(x => x._2 > 0)
         val daysInWorkPoints = getSectionPoints(rating.teacher_rating.no_work_days_num, daysInWork)
 
         val isMonFriFree = teacherMap.contains("0") || teacherMap.contains("4")
         val monFriPoints = if (isMonFriFree) rating.teacher_rating.no_work_days_on_mon_fri else 0
 
-        sum + hoursInWorkPoints + daysInWorkPoints + monFriPoints
+        sum + hoursInWorkPoints + gapHoursPoints + daysInWorkPoints + monFriPoints
     }
 
   }
