@@ -171,19 +171,19 @@ trait RatingServiceImpl extends ExceptionsHandler {
 }
 
 trait VotesServiceImpl extends ExceptionsHandler {
-  def listConfigVotes(): Future[Seq[scheduler.UsersVotes]] = {
+  def listConfigVotes(): Future[Seq[scheduler.StudentVotes]] = {
     handlers.VoteHandler.list() handle exceptions
   }
 
-  def getConfigVotes(configId: String): Future[scheduler.UsersVotes] = {
+  def getConfigVotes(configId: String): Future[scheduler.StudentVotes] = {
     handlers.VoteHandler.get(configId) handle exceptions
   }
 
   def setConfigVotes(
     configId: String,
-    votes: scala.collection.Map[String, scala.collection.Map[String, Short]]
+    votes: Seq[scheduler.StudentVote]
   ): Future[Unit] = {
-    handlers.VoteHandler.set(configId, votes.mapValues(_.toMap).toMap) handle exceptions
+    handlers.VoteHandler.set(configId, votes) handle exceptions
   }
 
   def deleteConfigVotes(configId: String): Future[Unit] = {

@@ -213,10 +213,17 @@ struct File {
   2: string content;
 }
 
-struct UsersVotes {
+struct StudentVote {
+  1: string student;
+  2: string course;
+  3: i16 points;
+}
+
+struct StudentVotes {
   1: Id config_id;
-  2: i16 votes_num;
-  3: map<Id, map<Id, i16>> votes;
+  2: list<StudentVote> votes;
+  3: i32 students_num;
+  4: i32 points_sum;
 }
 
 service SchedulerService {
@@ -292,15 +299,15 @@ service SchedulerService {
     2: ValidationException ve;
   )
 
-  list<UsersVotes> listConfigVotes()
+  list<StudentVotes> listConfigVotes()
 
-  UsersVotes getConfigVotes(
+  StudentVotes getConfigVotes(
     1: Id config_id;
   )
 
   void setConfigVotes(
     1: Id config_id;
-    2: map<Id, map<Id, i16>> votes;
+    2: list<StudentVote> votes;
   )
 
   void deleteConfigVotes(

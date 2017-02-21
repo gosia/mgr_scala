@@ -1,86 +1,63 @@
 package com.mgr.scheduler.handlers
 
 import com.twitter.util.Future
-import net.liftweb.json.JsonAST.JInt
-import net.liftweb.json.JsonAST.JString
 
 import com.mgr.scheduler.Couch
 import com.mgr.scheduler.docs
 import com.mgr.thrift.scheduler
-import com.mgr.utils.couch.CouchResponse
-import com.mgr.utils.couch.ReducedViewResult
 import com.mgr.utils.couch.ViewResult
 import com.mgr.utils.logging.Logging
 
 object VoteHandler extends Logging  with Couch {
 
-  def set(configId: String, votes: Map[String, Map[String, Short]]): Future[Unit] = {
+  def set(configId: String, votes: Seq[scheduler.StudentVote]): Future[Unit] = {
     log.info(s"VOTE: Set for config $configId")
 
-    VoteHandler.delete(configId) flatMap { _ =>
-      val allDocs = votes.keys.toSeq.map(user => docs.UserVote(configId, votes, user))
+    val id = docs.StudentVotes.getCouchId(configId)
 
-      couchClient.bulkAdd(allDocs) map { responses =>
-        CouchResponse.logErrors(responses)
-        ()
-      }
+    couchClient.get[docs.StudentVotes](id) flatMap {
+      case None =>
+        val newDoc = docs.StudentVotes(configId, votes)
+        couchClient.update[docs.StudentVotes](newDoc) map { _ => () }
+      case Some(doc) =>
+        val newDoc = docs.StudentVotes(configId, votes).copy(_rev=doc._rev)
+        couchClient.update[docs.StudentVotes](newDoc) map { _ => () }
     }
   }
 
-  def get(configId: String): Future[scheduler.UsersVotes] = {
+  def get(configId: String): Future[scheduler.StudentVotes] = {
     log.info(s"VOTE: Get for config $configId")
 
-    val votesQ = couchClient.view("votes/by_config")
-      .startkey(configId)
-      .endkey(configId)
+    val id = docs.StudentVotes.getCouchId(configId)
+
+    couchClient.get[docs.StudentVotes](id) map {
+      case None => throw scheduler.ValidationException(s"Głosowanie dla $configId nie istnieje")
+      case Some(doc) => doc.toThrift
+    }
+  }
+
+  def list(): Future[Seq[scheduler.StudentVotes]] = {
+    log.info(s"VOTE: List")
+
+    val votesQ = couchClient.view("utils/by_type")
+      .startkey(docs.StudentVotes.`type`)
+      .endkey(docs.StudentVotes.`type`)
       .reduce(false)
       .includeDocs
 
-    votesQ.execute map { viewResults: ViewResult =>
-      docs.UserVote.toThrift(configId, viewResults.docs[docs.UserVote])
-    }
-  }
-
-  def list(): Future[Seq[scheduler.UsersVotes]] = {
-    log.info(s"VOTE: List")
-
-    val votesQ = couchClient.view("votes/by_config")
-      .reduce(true)
-      .groupLevel(1)
-
-    votesQ.executeReduced map { viewResults: ReducedViewResult =>
-      viewResults.rows.map(
-        x => scheduler.UsersVotes(
-          x.key.asInstanceOf[JString].values, x.value.asInstanceOf[JInt].values.toShort, Map()
-        )
-      )
-    }
+    votesQ.execute map { result: ViewResult => result mapDocs {
+      doc: docs.StudentVotes => doc.toThrift
+    }}
   }
 
   def delete(configId: String): Future[Unit] = {
     log.info(s"VOTE: Delete for config $configId")
 
-    couchClient.exists(configId) flatMap {
-      case false => throw scheduler.ValidationException("Przydział o podanym id nie istnieje")
-      case true =>
-        val votesQ = couchClient.view("votes/by_config")
-          .startkey(configId)
-          .endkey(configId)
-          .reduce(false)
-          .includeDocs
+    val id = docs.StudentVotes.getCouchId(configId)
 
-        votesQ.execute flatMap { viewResults: ViewResult =>
-          val docsToRemove = viewResults.docs[docs.UserVote]
-
-          docsToRemove.size match {
-            case 0 => Future.Unit
-            case _ =>
-              couchClient.bulkDelete[docs.UserVote](docsToRemove) map { responses =>
-                CouchResponse.logErrors(responses)
-                ()
-              }
-          }
-        }
+    couchClient.get[docs.StudentVotes](id) flatMap {
+      case None => throw scheduler.ValidationException(s"Głosowanie dla $configId nie istnieje")
+      case Some(doc) => couchClient.delete[docs.StudentVotes](doc) map { _ => () }
     }
   }
 
