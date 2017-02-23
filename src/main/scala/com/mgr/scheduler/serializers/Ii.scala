@@ -114,13 +114,14 @@ trait IiLinear extends datastructures.Linear {
     "p" -> Seq(Seq("pracownia")),
     "r" -> Seq(Seq("cwiczenia"), Seq("pracownia")),
     "s" -> Seq(Seq("cwiczenia")),
-    "l" -> Seq(Seq("pracownia"))
+    "l" -> Seq(Seq("pracownia")),
+    "i" -> Seq(Seq("wyklad", "cwiczenia", "pracownia"))
   ).mapValues { xs => xs.map(_.map(l => docs.Label.getCouchId(configId, l))) }
 
   private def getGroupDoc(line: String, configId: String): docs.Group = {
     val p = line.split("\\|", -1)
-    val (groupId, courseName, groupType, hours, teacherId, notes) =
-      (p(1), p(2), p(3), p(4), p(5), p(6))
+    val (groupId, courseName, groupType, hours, teacherIds, notes) =
+      (p(1), p(2), p(3), p(4), p(5).split(","), p(6))
 
     val id = docs.Group.getCouchId(configId, groupId.toString)
 
@@ -130,7 +131,8 @@ trait IiLinear extends datastructures.Linear {
       "w" -> 0,
       "e" -> 0,
       "r" -> 15,
-      "s" -> 15
+      "s" -> 15,
+      "i" -> 0
     )
 
     docs.Group(
@@ -140,7 +142,7 @@ trait IiLinear extends datastructures.Linear {
       room_labels = Some(roomLabels(configId).getOrElse(groupType, Seq())),
       labels = None,
       same_term_groups = Seq(),
-      teachers = Seq(docs.Teacher.getCouchId(configId, teacherId)),
+      teachers = teacherIds.map(docs.Teacher.getCouchId(configId, _)),
       terms = allTermIds(configId),
       terms_num = hours.toInt,
       students_num = studentsNumMap.getOrElse(groupType, 0), // w, e is counted in fixStudentsNum
