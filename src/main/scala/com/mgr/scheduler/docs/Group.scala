@@ -1,6 +1,7 @@
 package com.mgr.scheduler.docs
 
 import com.mgr.thrift.scheduler
+import com.mgr.thrift.scheduler.BulkEditedGroup
 
 final case class GroupExtra(
   course: String,
@@ -26,10 +27,25 @@ final case class Group(
 
   `type`: String = Group.`type`
 ) extends Base {
+  def edit(edited: BulkEditedGroup): Group =
+    this.copy(
+      teachers = edited.teachers.getOrElse(this.teachers),
+      terms = edited.terms.getOrElse(this.terms),
+      terms_num = edited.termsNum.map(_.toInt).getOrElse(this.terms_num),
+      students_num = edited.studentsNum.map(_.toInt).getOrElse(this.students_num),
+      room_labels = Some(edited.roomLabels.getOrElse(getRoomLabels)),
+      labels = None,
+      extra = this.extra.copy(
+        course = edited.course.getOrElse(this.extra.course),
+        group_type = edited.groupType.getOrElse(this.extra.group_type),
+        notes = edited.notes.getOrElse(this.extra.notes)
+      )
+    )
 
-  def getRoomLabels: Seq[Seq[String]] = labels match {
-    case Some(xs) => Seq(xs)
-    case None => room_labels.getOrElse(Seq())
+
+  def getRoomLabels: Seq[Seq[String]] = room_labels match {
+    case Some(xs) => xs
+    case None => labels.map(Seq(_)).getOrElse(Seq())
   }
 
   def isValid(

@@ -80,6 +80,14 @@ trait ConfigServiceImpl extends ExceptionsHandler {
       toConfigId, fromConfigId, elementsType
     ) handle exceptions
   }
+
+  def bulkEditConfigGroups(
+    configId: String,
+    groupIds: scala.collection.Set[String],
+    group: scheduler.BulkEditedGroup
+  ): Future[Unit] =  handlers.ConfigHandler.bulkEditGroups(
+    configId, groupIds, group
+  ) handle exceptions
 }
 
 trait TaskServiceImpl extends ExceptionsHandler {

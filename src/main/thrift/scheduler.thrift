@@ -82,6 +82,17 @@ struct Group {
   9: GroupExtra extra;
 }
 
+struct BulkEditedGroup {
+  2: optional list<string> teachers;
+  3: optional list<string> terms;
+  4: optional list<list<string>> room_labels;
+  7: optional i16 terms_num;
+  8: optional i16 students_num;
+  9: optional string course;
+  10: optional string group_type;
+  11: optional string notes;
+}
+
 struct ConfigCreationInfo {
   1: Id id;
   2: i16 year;
@@ -276,6 +287,15 @@ service SchedulerService {
     3: list<Room> rooms;
     4: list<Teacher> teachers;
     5: list<Group> groups;
+  ) throws (
+    1: SchedulerException se;
+    2: ValidationException ve;
+  )
+
+  void bulkEditConfigGroups(
+    1: Id id;
+    2: set<Id> groups;
+    3: BulkEditedGroup value;
   ) throws (
     1: SchedulerException se;
     2: ValidationException ve;

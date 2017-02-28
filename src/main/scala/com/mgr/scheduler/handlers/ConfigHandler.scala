@@ -577,4 +577,23 @@ object ConfigHandler extends Logging  with Couch {
     }
   }
 
+  def bulkEditGroups(
+    configId: String,
+    groupIds: scala.collection.Set[String],
+    group: scheduler.BulkEditedGroup
+  ): Future[Unit] = {
+
+    val groupsF: Seq[Future[docs.Group]] = groupIds.toSeq.map(id =>
+      couchClient.get[docs.Group](docs.Group.getCouchId(configId, id)) map {
+        case Some(doc) => doc.edit(group)
+        case None => throw scheduler.ValidationException(s"Grupa $id nie istnieje")
+      }
+    )
+
+    Future.collect(groupsF) flatMap { groups =>
+      couchClient.bulkAdd[docs.Group](groups) map { _ => () }
+    }
+
+  }
+
 }
