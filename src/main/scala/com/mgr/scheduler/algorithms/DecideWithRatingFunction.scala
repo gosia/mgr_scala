@@ -7,7 +7,10 @@ import com.mgr.scheduler.docs
 import com.mgr.scheduler.docs.TaskRating
 import com.mgr.scheduler.handlers.RatingHandler
 
-case class DecideWithRatingFunction(rating: docs.Rating) extends RandomBase {
+case class DecideWithRatingFunction(
+  rating: docs.Rating,
+  votes: Seq[docs.Vote]
+) extends RandomBase {
 
   def orderGroups(groups: Seq[docs.Group], rt: RoomTimes): Future[Seq[docs.Group]] = {
 
@@ -48,7 +51,8 @@ case class DecideWithRatingFunction(rating: docs.Rating) extends RandomBase {
             )
 
             val points = TaskRating(
-              rating, taskRatingHelper, timetable, termsMap
+              rating, taskRatingHelper, timetable, termsMap, groupsMap, votes,
+              group, newTimes
             ).getRating()
 
             (validRt, newTimes, points)
