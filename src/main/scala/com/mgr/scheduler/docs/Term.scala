@@ -117,8 +117,8 @@ final case class Term(
     val time = Time.apply(point.time)
 
     this.day == point.day.name.toLowerCase &&
-      TimeOrdering.compare(this.start, time) == -1 &&
-      TimeOrdering.compare(time, this.end) == -1
+      TimeOrdering.compare(this.start, time) <= 0 &&
+      TimeOrdering.compare(time, this.end) <= 0
   }
 
 }
