@@ -21,7 +21,7 @@ trait Base extends Logging with Couch {
   val configId2: String = s"$fileId-2"
 
   def allTermsF(configId: String): Seq[docs.Term] = (0 to 4).flatMap({ day =>
-    (8 to 21).map { hour =>
+    (8 to 19).map { hour =>
       (day == 0 && hour < 12) || (day == 4 && hour >= 12) match {
         case true => None
         case false => Some(docs.Term.forIi(configId, day, hour))
@@ -44,15 +44,14 @@ trait Base extends Logging with Couch {
     "r|109|20|pracownia,109",
     "r|110|20|pracownia,110",
     "r|119|80|wyklad,119",
-    "r|137|20|wyklad,cwiczenia,137",
+    "r|137|20|pracownia,137",
     "r|139|32|wyklad,cwiczenia,139",
     "r|140|46|wyklad,cwiczenia,140",
     "r|141|48|wyklad,cwiczenia,141",
-    "r|237|12|wyklad,cwiczenia,237",
-    "r|310|10|wyklad,cwiczenia,310",
+    "r|310|12|wyklad,cwiczenia,310",
     "r|325|20|wyklad,cwiczenia,325",
-    "r|4|32|pracownia,4",
-    "r|5|32|pracownia,5",
+    "r|4|32|wyklad,cwiczenia,4",
+    "r|5|32|wyklad,cwiczenia,5",
     "r|7|10|pracownia,7",
     "r|25|200|wyklad,25"
   )

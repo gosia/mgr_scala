@@ -79,7 +79,7 @@ trait IiLinear extends datastructures.Linear {
   }
 
   private def allTerms(configId: String): Seq[docs.Term] = (0 to 4).flatMap({ day =>
-    (8 to 21).map { hour =>
+    (8 to 19).map { hour =>
       (day == 0 && hour < 12) || (day == 4 && hour >= 12) match {
         case true => None
         case false => Some(docs.Term.forIi(configId, day, hour))
